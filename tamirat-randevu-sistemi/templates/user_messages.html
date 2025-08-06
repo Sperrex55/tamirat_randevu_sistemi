@@ -1,0 +1,248 @@
+{% extends "base_user.html" %}
+
+{% block title %}Mesajlar{% endblock %}
+
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='user_messages.css') }}" />
+
+{% endblock %}
+
+
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+      {% for category, message in messages %}
+        <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+            <div class="toast-body">{{ message }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="container py-4">
+  <div class="row gy-4">
+
+    <!-- Mesaj Listesi ve Filtre -->
+    <div class="col-lg-7">
+      <div class="card mb-4">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-envelope-paper-fill fs-4"></i> Gelen ↔ Giden Mesajlar
+        </div>
+
+        <div class="filter-container p-3">
+          <input type="search" id="searchInput" placeholder="Mesajlarda ara..." aria-label="Mesajlarda arama">
+          <input type="date" id="startDate" aria-label="Başlangıç Tarihi">
+          <input type="date" id="endDate" aria-label="Bitiş Tarihi">
+          <button type="button" class="btn btn-outline-secondary" id="clearFilters" title="Filtreleri Temizle" aria-label="Filtreleri Temizle">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <ul class="list-group list-group-flush" id="messagesList" style="max-height: 460px; overflow-y:auto;">
+          {% if messages %}
+            {% for msg in messages %}
+            <li class="list-group-item d-flex justify-content-between align-items-start message-item"
+                data-subject="{{ msg.subject|lower }}"
+                data-body="{{ msg.body|lower|e }}"
+                data-created="{{ msg.created_at.isoformat() }}">
+              <div class="ms-1 me-auto">
+                <div class="fw-semibold text-truncate" title="{{ msg.subject }}">{{ msg.subject }}</div>
+                <small class="text-muted">{{ msg.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                <p class="mb-0 mt-1 text-secondary text-truncate" title="{{ msg.body }}">{{ msg.body }}</p>
+              </div>
+              {% if not msg.is_read %}
+              <span class="badge bg-danger">Yeni</span>
+              {% endif %}
+            </li>
+            {% endfor %}
+          {% else %}
+          <li class="list-group-item text-muted text-center">Henüz size ulaşan bir mesaj yok.</li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <!-- Mesaj Detay -->
+      <div class="card">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-chat-left-dots-fill fs-4"></i> Mesaj Detayı
+        </div>
+        <div class="card-body">
+          <h5 id="detailSubject" class="mb-2">Bir mesaj seçiniz</h5>
+          <small class="text-muted d-block mb-3" id="detailDate"></small>
+          <p id="detailBody" class="text-secondary">Mesaj içeriği burada görünecek.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sağ Panel -->
+    <div class="col-lg-5">
+
+      <!-- Randevular -->
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex align-items-center gap-2">
+          <i class="bi bi-calendar-check-fill fs-4"></i> Onaylanan Randevular
+        </div>
+        <ul class="list-group list-group-flush" id="appointmentsList" style="max-height: 250px; overflow-y:auto;">
+          {% if appointments %}
+            {% for appt in appointments %}
+            <li class="list-group-item appointment-item"
+                data-id="{{ appt.id }}">
+              <div class="fw-semibold text-primary">{{ appt.uzmanlik }}</div>
+              <small class="text-muted">{{ appt.date.strftime('%d.%m.%Y %H:%M') }}</small>
+              <div class="text-secondary mt-1">{{ appt.description }}</div>
+              <span class="remove-btn" title="Seçimi Kaldır" aria-label="Seçimi Kaldır">&times;</span>
+            </li>
+            {% endfor %}
+          {% else %}
+          <li class="list-group-item text-muted text-center">Henüz onaylanmış randevunuz yok.</li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <!-- Mesaj Gönder -->
+      <div class="card">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-send-fill fs-4"></i> Mesaj Gönder
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('user_messages') }}">
+            <input type="hidden" name="appointment_id" id="appointmentIdInput" required>
+
+            <div class="mb-3">
+              <label for="messageBody" class="form-label fw-semibold">Mesajınız</label>
+              <textarea class="form-control" id="messageBody" name="message_body" rows="5" placeholder="Mesajınızı yazınız..." required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100" id="sendMessageBtn" disabled>
+              <i class="bi bi-send-fill me-1"></i> Gönder
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const messageItems = [...document.querySelectorAll('.message-item')];
+  const appointments = [...document.querySelectorAll('.appointment-item')];
+  const detailSubject = document.getElementById('detailSubject');
+  const detailBody = document.getElementById('detailBody');
+  const detailDate = document.getElementById('detailDate');
+  const appointmentIdInput = document.getElementById('appointmentIdInput');
+  const sendBtn = document.getElementById('sendMessageBtn');
+  const searchInput = document.getElementById('searchInput');
+  const startDateInput = document.getElementById('startDate');
+  const endDateInput = document.getElementById('endDate');
+  const clearFiltersBtn = document.getElementById('clearFilters');
+  const messagesList = document.getElementById('messagesList');
+
+  // Mesaj seçimi
+  function selectMessage(item) {
+    messageItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+
+    detailSubject.textContent = item.dataset.subject;
+    detailDate.textContent = new Date(item.dataset.created).toLocaleString();
+
+    // Animasyon için önce gizle sonra göster
+    detailBody.classList.remove('show');
+    setTimeout(() => {
+      detailBody.textContent = item.dataset.body;
+      detailBody.classList.add('show');
+    }, 150);
+  }
+
+  messageItems.forEach(item => {
+    item.addEventListener('click', () => selectMessage(item));
+  });
+
+  // Randevu seçimi ve kaldırma
+  appointments.forEach(item => {
+    const removeBtn = item.querySelector('.remove-btn');
+
+    // Tıklayınca seçili / seçili değil toggle
+    item.addEventListener('click', (e) => {
+      // Eğer çarpı ikonuna tıklanıyorsa farklı işlem
+      if(e.target === removeBtn) return;
+      if(item.classList.contains('selected')) {
+        item.classList.remove('selected');
+        appointmentIdInput.value = '';
+        sendBtn.disabled = true;
+      } else {
+        appointments.forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        appointmentIdInput.value = item.dataset.id;
+        sendBtn.disabled = false;
+      }
+    });
+
+    // Çarpı butonu tıklanırsa seçim kaldırılır
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      item.classList.remove('selected');
+      // Eğer kaldırılan randevu seçili ise mesaj gönder düğmesini devre dışı bırak
+      if(appointmentIdInput.value === item.dataset.id) {
+        appointmentIdInput.value = '';
+        sendBtn.disabled = true;
+      }
+    });
+  });
+
+  // Filtreleme ve arama fonksiyonu
+  function filterMessages() {
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+    const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+
+    messageItems.forEach(item => {
+      const subject = item.dataset.subject;
+      const body = item.dataset.body;
+      const created = new Date(item.dataset.created);
+
+      const matchesSearch = !searchTerm || subject.includes(searchTerm) || body.includes(searchTerm);
+      const matchesStart = !startDate || created >= startDate;
+      const matchesEnd = !endDate || created <= endDate;
+
+      if (matchesSearch && matchesStart && matchesEnd) {
+        item.style.display = '';
+      } else {
+        item.style.display = 'none';
+        if(item.classList.contains('active')) {
+          // Aktif mesaj listede görünmezse, detay temizle
+          detailSubject.textContent = 'Bir mesaj seçiniz';
+          detailBody.textContent = 'Mesaj içeriği burada görünecek.';
+          detailDate.textContent = '';
+          detailBody.classList.remove('show');
+          item.classList.remove('active');
+        }
+      }
+    });
+  }
+
+  searchInput.addEventListener('input', filterMessages);
+  startDateInput.addEventListener('change', filterMessages);
+  endDateInput.addEventListener('change', filterMessages);
+
+  clearFiltersBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    startDateInput.value = '';
+    endDateInput.value = '';
+    filterMessages();
+  });
+})();
+</script>
+{% endblock %}

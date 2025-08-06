@@ -1,0 +1,188 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Kullanıcı Yönetimi - Admin Paneli{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+  <style>
+    .container {
+      max-width: 1100px;
+    }
+
+    h2 {
+      color: #212529;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .table-responsive {
+      background: #ffffff;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      padding: 1rem;
+    }
+
+    tbody tr:hover {
+      background-color: #e9f5ff;
+      cursor: pointer;
+      transition: background-color 0.25s ease;
+    }
+
+    .btn i {
+      vertical-align: middle;
+      font-size: 1.1rem;
+    }
+
+    .btn-outline-danger:hover {
+      background-color: #dc3545;
+      color: #fff !important;
+      border-color: #dc3545 !important;
+      box-shadow: 0 0 10px rgba(220, 53, 69, 0.4);
+    }
+
+    .btn-outline-warning:hover {
+      background-color: #ffc107;
+      color: #212529 !important;
+      border-color: #ffc107 !important;
+      box-shadow: 0 0 10px rgba(255, 193, 7, 0.4);
+    }
+
+    .toast-body {
+      font-size: 0.95rem;
+    }
+
+    .toast .btn-close {
+      font-size: 0.8rem;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+      {% for category, message in messages %}
+        <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+            <div class="toast-body">{{ message }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="container mt-5 px-3 px-md-0">
+  <h2 class="mb-4 text-center fw-bold">Kullanıcıları Yönet</h2>
+
+  {% if users %}
+  <div class="table-responsive">
+    <table id="usersTable" class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-primary text-primary text-uppercase">
+        <tr>
+          <th>#</th>
+          <th>Ad Soyad</th>
+          <th>E-posta</th>
+          <th>TC Kimlik No</th>
+          <th>Telefon</th>
+          <th>Konum</th>
+          <th>İşlemler</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ user.id }}</td>
+          <td>{{ user.ad }} {{ user.soyad }}</td>
+          <td><a href="mailto:{{ user.email }}">{{ user.email }}</a></td>
+          <td>{{ user.tc }}</td>
+          <td>{{ user.telefon }}</td>
+          <td>{{ user.adres if user.adres else 'Konum bilgisi yok' }}</td>
+          <td>
+            <a href="{{ url_for('edit_user', id=user.id) }}" class="btn btn-sm btn-outline-warning me-1" title="Düzenle">
+              <i class="bi bi-pencil-fill"></i>
+            </a>
+            <button 
+              type="button" 
+              class="btn btn-sm btn-outline-danger" 
+              title="Sil"
+              data-bs-toggle="modal" 
+              data-bs-target="#deleteUserModal"
+              data-user-id="{{ user.id }}"
+              data-user-name="{{ user.ad }} {{ user.soyad }}">
+              <i class="bi bi-trash-fill"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="alert alert-info text-center mt-4">
+    Henüz kayıtlı kullanıcı bulunmamaktadır.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Silme Onay Modalı -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow">
+      <div class="modal-header bg-danger text-white rounded-top">
+        <h5 class="modal-title" id="deleteUserModalLabel"><i class="bi bi-exclamation-triangle me-2"></i>Silme Onayı</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body text-center fs-5">
+        <p><strong id="deleteUserName"></strong> adlı kullanıcıyı silmek istediğinize emin misiniz?</p>
+      </div>
+      <div class="modal-footer border-0 justify-content-between">
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i> Vazgeç
+        </button>
+        <form id="deleteUserForm" method="POST" class="m-0">
+          <button type="submit" class="btn btn-danger rounded-pill px-4">
+            <i class="bi bi-trash-fill me-1"></i> Sil
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  $(document).ready(function () {
+    $('#usersTable').DataTable({
+      language: {
+        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
+      },
+      pageLength: 10,
+      lengthMenu: [5, 10, 25, 50, 100],
+      columnDefs: [
+        { orderable: false, targets: 6 }
+      ]
+    });
+
+    // Silme Modalı
+    var deleteUserModal = document.getElementById('deleteUserModal');
+    deleteUserModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var userId = button.getAttribute('data-user-id');
+      var userName = button.getAttribute('data-user-name');
+
+      document.getElementById('deleteUserName').textContent = userName;
+      document.getElementById('deleteUserForm').action = `/admin/user/delete/${userId}`;
+    });
+  });
+</script>
+{% endblock %}

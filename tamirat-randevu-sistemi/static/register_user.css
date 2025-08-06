@@ -1,0 +1,150 @@
+/* Tema Değişkenleri */
+:root {
+    --font-family: 'Poppins', sans-serif;
+    --bg-body: #eef2f6;
+    --bg-card: #ffffff;
+
+    --color-primary: #0056b3;
+    --color-primary-dark: #004494;
+    --color-text: #333;
+    --color-subtext: #6c757d;
+    --color-input-border: #ddd;
+    --color-button-text: #ffffff;
+
+    --border-radius: 8px;
+    --border-radius-card: 16px;
+
+    --padding-body: 60px 0;
+    --padding-card: 35px;
+    --padding-card-mobile: 20px;
+    --padding-input: 14px;
+    --padding-button: 16px;
+
+    --font-size-base: 14px;
+    --font-size-button: 18px;
+    --font-size-button-mobile: 16px;
+
+    --shadow-card: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Genel Stil */
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-body);
+    padding: var(--padding-body);
+}
+
+/* Konteyner */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Satır Yapısı */
+.row {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: stretch;
+}
+
+/* Kart ve Görsel Sütunları */
+.col-md-6, .col-lg-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Kart Tasarımı */
+.register-card {
+    background: var(--bg-card);
+    border-radius: var(--border-radius-card);
+    padding: var(--padding-card);
+    box-shadow: var(--shadow-card);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Başlık */
+.register-card h2 {
+    color: var(--color-primary);
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.register-card p {
+    font-size: var(--font-size-base);
+    color: var(--color-subtext);
+    margin-bottom: 20px;
+}
+
+/* Form Alanları */
+.register-card label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-align: left;
+    color: var(--color-text);
+}
+
+/* Input ve Select */
+.register-card input,
+.register-card select {
+    width: 100%;
+    padding: var(--padding-input);
+    margin-bottom: 14px;
+    border: 2px solid var(--color-input-border);
+    border-radius: var(--border-radius);
+    background: #fff;
+    font-size: var(--font-size-base);
+}
+
+/* İç Form Satırı */
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+/* Buton */
+.btn-register {
+    width: 100%;
+    padding: var(--padding-button);
+    font-size: var(--font-size-button);
+    font-weight: 700;
+    border-radius: var(--border-radius);
+    background: var(--color-primary);
+    color: var(--color-button-text);
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    margin-top: 10px;
+}
+
+.btn-register:hover {
+    background: var(--color-primary-dark);
+}
+
+/* Mobil Uyumluluk */
+@media (max-width: 768px) {
+    .row {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .col-md-6, .col-lg-6 {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .register-card {
+        padding: var(--padding-card-mobile);
+    }
+
+    .btn-register {
+        font-size: var(--font-size-button-mobile);
+    }
+}

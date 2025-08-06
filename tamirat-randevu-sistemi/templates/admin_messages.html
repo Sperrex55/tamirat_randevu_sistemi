@@ -1,0 +1,400 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Mesajlar{% endblock %}
+
+{% block head %}
+<style>
+  /* Tablo başlığı için gradient */
+  .table-primary {
+    background: linear-gradient(135deg, #4a90e2, #9013fe);
+    color: white;
+  }
+  /* Hover efekti */
+  .table-hover tbody tr:hover {
+    background-color: rgba(144, 19, 254, 0.15);
+    cursor: pointer;
+  }
+  /* Buton minimum genişliği */
+  .btn-sm {
+    min-width: 40px;
+  }
+  /* Filtre inputları ve select */
+  #searchInput, #technicianFilter, #userFilter, #startDate, #endDate {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 6px rgb(144 19 254 / 0.15);
+    transition: box-shadow 0.3s ease;
+  }
+  #searchInput:focus, #technicianFilter:focus, #userFilter:focus, #startDate:focus, #endDate:focus {
+    box-shadow: 0 0 8px 2px #9013fe;
+    outline: none;
+  }
+  /* Modal başlık renk ve ikon */
+  .modal-header.bg-info {
+    background: linear-gradient(135deg, #4a90e2, #9013fe);
+  }
+  /* Modal footer butonları */
+  .modal-footer .btn-secondary {
+    border-radius: 0.5rem;
+  }
+  /* Silme modal header */
+  .modal-header.bg-danger {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+  }
+
+/* Butonlar */
+  .btn-sm {
+    min-width: 44px;
+    border-radius: 0.6rem;
+    padding: 0.375rem 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 3px 8px rgb(0 0 0 / 0.12);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .btn-info {
+    background-color: #6c5ce7;
+    border-color: #6c5ce7;
+    box-shadow: 0 3px 12px rgba(108, 92, 231, 0.5);
+  }
+
+  .btn-info:hover {
+    background-color: #341f97;
+    border-color: #341f97;
+    box-shadow: 0 5px 15px rgba(52, 31, 151, 0.7);
+  }
+
+  .btn-danger {
+    background-color: #d63031;
+    border-color: #d63031;
+    box-shadow: 0 3px 12px rgba(214, 48, 49, 0.5);
+  }
+
+  .btn-danger:hover {
+    background-color: #b71c1c;
+    border-color: #b71c1c;
+    box-shadow: 0 5px 15px rgba(183, 28, 28, 0.7);
+  }
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+      {% for category, message in messages %}
+        <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2">
+          <div class="d-flex">
+            <div class="toast-body">{{ message }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="fw-bold text-primary m-0 d-flex align-items-center gap-2">
+      <i class="bi bi-chat-dots fs-4"></i> Üye ↔ Tekniker Mesajları
+    </h4>
+   
+  </div>
+
+  {% if messages %}
+  <form class="row g-3 mb-4 align-items-center p-3 rounded-4 shadow-sm" style="background: #fdfdff; box-shadow: 0 4px 12px rgba(144, 19, 254, 0.1);" onsubmit="return false;">
+
+  <div class="col-lg-3 col-md-6">
+    <div class="input-group">
+      <span class="input-group-text bg-white border-0"><i class="bi bi-search text-primary"></i></span>
+      <input type="text" id="searchInput" class="form-control border-0 shadow-sm" placeholder="Konu, içerik veya isim ara..." />
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-6">
+    <div class="input-group">
+      <span class="input-group-text bg-white border-0"><i class="bi bi-wrench-adjustable text-primary"></i></span>
+      <select id="technicianFilter" class="form-select border-0 shadow-sm">
+        <option value="">Tekniker Seç</option>
+        {% for tech in technicians %}
+        <option value="{{ tech.ad }} {{ tech.soyad }}">{{ tech.ad }} {{ tech.soyad }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-6">
+    <div class="input-group">
+      <span class="input-group-text bg-white border-0"><i class="bi bi-person text-primary"></i></span>
+      <select id="userFilter" class="form-select border-0 shadow-sm">
+        <option value="">Üye Seç</option>
+        {% for user in users %}
+        <option value="{{ user.ad }} {{ user.soyad }}">{{ user.ad }} {{ user.soyad }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-6">
+    <div class="input-group">
+      <span class="input-group-text bg-white border-0"><i class="bi bi-calendar-event text-primary"></i></span>
+      <input type="date" id="startDate" class="form-control border-0 shadow-sm" placeholder="Başlangıç">
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-6">
+    <div class="input-group">
+      <span class="input-group-text bg-white border-0"><i class="bi bi-calendar-check text-primary"></i></span>
+      <input type="date" id="endDate" class="form-control border-0 shadow-sm" placeholder="Bitiş">
+    </div>
+  </div>
+
+  <div class="col-lg-1 col-md-12 d-grid">
+    <button type="button" class="btn text-white shadow-sm" id="clearFilters" title="Filtreleri Temizle" style="background: linear-gradient(135deg, #e74c3c, #c0392b); border: none;">
+      <i class="bi bi-x-circle fs-5"></i>
+    </button>
+  </div>
+
+</form>
+
+
+  <!-- Mesajlar Tablosu -->
+<div class="table-responsive shadow-sm rounded" style="box-shadow: 0 4px 12px rgb(144 19 254 / 0.15);">
+    <table class="table table-hover align-middle mb-0" id="messagesTable" style="min-width: 720px;">
+      <thead class="table-primary text-center text-nowrap">
+        <tr>
+          <th class="text-start">Konu</th>
+          <th>Gönderen</th>
+          <th>Alıcı</th>
+          <th>Tarih</th>
+          <th class="text-center">Detay</th>
+          <th class="text-center">Sil</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for msg in messages %}
+        <tr class="message-row text-nowrap"
+          data-subject="{{ msg.subject | lower }}"
+          data-body="{{ msg.body | lower }}"
+          data-technician="{{ (msg.technician.ad ~ ' ' ~ msg.technician.soyad) | lower }}"
+          data-user="{{ (msg.user.ad ~ ' ' ~ msg.user.soyad) | lower }}"
+          data-date="{{ msg.created_at.strftime('%Y-%m-%d') }}"
+          data-id="{{ msg.id }}"
+          data-fullsubject="{{ msg.subject | e }}"
+          data-fullbody="{{ msg.body | e }}"
+          data-technician-full="{{ msg.technician.ad }} {{ msg.technician.soyad }}"
+          data-user-full="{{ msg.user.ad }} {{ msg.user.soyad }}"
+          data-receiver-full="{% if msg.sender_type == 'technician' %}{{ msg.user.ad }} {{ msg.user.soyad }}{% elif msg.sender_type == 'user' %}{{ msg.technician.ad }} {{ msg.technician.soyad }}{% else %}Bilinmiyor{% endif %}"
+          data-created="{{ msg.created_at.strftime('%d.%m.%Y %H:%M') }}"
+          data-sender-type="{{ msg.sender_type }}">
+
+          <td class="text-start fw-semibold text-truncate" style="max-width: 250px;">{{ msg.subject }}</td>
+          <td>
+            {% if msg.sender_type == 'technician' %}
+              <span class="badge bg-primary">Tekniker</span><br>{{ msg.technician.ad }} {{ msg.technician.soyad }}
+            {% else %}
+              <span class="badge bg-success">Üye</span><br>{{ msg.user.ad }} {{ msg.user.soyad }}
+            {% endif %}
+          </td>
+          <td>{% if msg.sender_type == 'technician' %}{{ msg.user.ad }} {{ msg.user.soyad }}{% else %}{{ msg.technician.ad }} {{ msg.technician.soyad }}{% endif %}</td>
+          <td>{{ msg.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+          <td class="text-center">
+            <button type="button" class="btn btn-sm btn-info btn-detail" data-bs-toggle="modal" data-bs-target="#detailModal" title="Detayları Göster">
+              <i class="bi bi-eye"></i>
+            </button>
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-sm btn-danger btn-delete" data-bs-toggle="modal" data-bs-target="#deleteModal" data-message-id="{{ msg.id }}" title="Mesajı Sil">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="alert alert-info shadow-sm text-center py-4 rounded">
+    <i class="bi bi-info-circle-fill me-2 fs-4"></i> Henüz kayıtlı mesaj bulunmuyor.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Detay Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true" aria-labelledby="detailModalLabel" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4 shadow-lg">
+      <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #4a90e2, #9013fe); border-top-left-radius: 1rem; border-top-right-radius: 1rem;">
+        <h5 class="modal-title d-flex align-items-center gap-2" id="detailModalLabel">
+          <i class="bi bi-chat-left-text fs-4"></i> Mesaj Detayları
+        </h5>
+        <button type="button" class="btn-close btn-close-white shadow-sm" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body fs-5 p-4">
+        <h5 id="detailSubject" class="fw-bold mb-4 text-primary"></h5>
+
+        <div class="mb-3">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-person-circle text-secondary fs-5"></i>
+            <span class="fw-semibold">Gönderen:</span> 
+            <span id="detailSenderType" class="badge rounded-pill"></span>
+            <span id="detailTechnician" class="fw-medium"></span>
+            <span id="detailUser" class="fw-medium"></span>
+          </div>
+
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-person-check text-secondary fs-5"></i>
+            <span class="fw-semibold">Alıcı:</span> 
+            <span id="detailReceiver" class="fw-medium text-dark"></span>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-calendar-event text-secondary fs-5"></i>
+            <span class="fw-semibold">Tarih:</span> 
+            <span id="detailDate" class="text-muted"></span>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <p id="detailBody" style="white-space: pre-wrap;" class="text-secondary fs-5"></p>
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between p-3">
+        <small class="text-muted">Mesaj görüntüleme ekranı</small>
+       
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Silme Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true" aria-labelledby="deleteModalLabel" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title d-flex align-items-center gap-2" id="deleteModalLabel">
+          <i class="bi bi-exclamation-triangle fs-4"></i> Mesaj Sil
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body fs-5">
+        <p>Bu mesajı silmek istediğinize emin misiniz?</p>
+      </div>
+      <div class="modal-footer">
+        <form method="POST" action="/admin/messages/delete" id="deleteForm" class="d-flex gap-2">
+          <input type="hidden" name="message_id" id="deleteMessageId">
+          <button type="button" class="btn btn-outline-secondary flex-grow-1" data-bs-dismiss="modal">İptal</button>
+          <button type="submit" class="btn btn-danger flex-grow-1">Evet, Sil</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const searchInput = document.getElementById("searchInput");
+  const techFilter = document.getElementById("technicianFilter");
+  const userFilter = document.getElementById("userFilter");
+  const startDate = document.getElementById("startDate");
+  const endDate = document.getElementById("endDate");
+  const clearBtn = document.getElementById("clearFilters");
+  const messageRows = document.querySelectorAll(".message-row");
+
+  function filterMessages() {
+    const searchValue = searchInput.value.trim().toLowerCase();
+    const techValue = techFilter.value.toLowerCase();
+    const userValue = userFilter.value.toLowerCase();
+    const start = startDate.value;
+    const end = endDate.value;
+
+    messageRows.forEach(row => {
+      const subject = row.dataset.subject || "";
+      const body = row.dataset.body || "";
+      const technician = (row.dataset.technician || "").toLowerCase();
+      const user = (row.dataset.user || "").toLowerCase();
+      const date = row.dataset.date || "";
+
+      const matchSearch = subject.includes(searchValue)
+        || body.includes(searchValue)
+        || technician.includes(searchValue)
+        || user.includes(searchValue);
+
+      const matchTech = !techValue || technician === techValue;
+      const matchUser = !userValue || user === userValue;
+      const matchStart = !start || date >= start;
+      const matchEnd = !end || date <= end;
+
+      row.style.display = (matchSearch && matchTech && matchUser && matchStart && matchEnd) ? "" : "none";
+    });
+  }
+
+  searchInput.addEventListener("input", filterMessages);
+  techFilter.addEventListener("change", filterMessages);
+  userFilter.addEventListener("change", filterMessages);
+  startDate.addEventListener("change", filterMessages);
+  endDate.addEventListener("change", filterMessages);
+
+  clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    techFilter.value = "";
+    userFilter.value = "";
+    startDate.value = "";
+    endDate.value = "";
+    filterMessages();
+  });
+
+  // Detay modal açılırken verileri doldur
+  const detailModal = document.getElementById("detailModal");
+  detailModal.addEventListener("show.bs.modal", event => {
+    const button = event.relatedTarget;
+    const row = button.closest("tr");
+
+    document.getElementById("detailSubject").textContent = row.dataset.fullsubject;
+
+    // Gönderen tipi badge ve isim
+    const senderType = row.dataset.senderType;
+    const detailSenderType = document.getElementById("detailSenderType");
+    const detailTechnician = document.getElementById("detailTechnician");
+    const detailUser = document.getElementById("detailUser");
+    detailSenderType.textContent = "";
+    detailTechnician.textContent = "";
+    detailUser.textContent = "";
+
+    if (senderType === 'technician') {
+      detailSenderType.textContent = "Tekniker";
+      detailSenderType.className = "badge bg-primary";
+      detailTechnician.textContent = row.dataset.technicianFull;
+    } else if (senderType === 'user') {
+      detailSenderType.textContent = "Üye";
+      detailSenderType.className = "badge bg-success";
+      detailUser.textContent = row.dataset.userFull;
+    } else {
+      detailSenderType.textContent = "Bilinmiyor";
+      detailSenderType.className = "badge bg-secondary";
+    }
+
+    // Alıcı bilgisi burada düzeltildi
+    document.getElementById("detailReceiver").textContent = row.dataset.receiverFull;
+    document.getElementById("detailDate").textContent = row.dataset.created;
+    document.getElementById("detailBody").textContent = row.dataset.fullbody;
+  });
+
+  // Silme modal açılırken mesaj id'sini forma ekle
+  const deleteModal = document.getElementById("deleteModal");
+  deleteModal.addEventListener("show.bs.modal", event => {
+    const button = event.relatedTarget;
+    const messageId = button.getAttribute("data-message-id");
+    document.getElementById("deleteMessageId").value = messageId;
+  });
+</script>
+
+{% endblock %}

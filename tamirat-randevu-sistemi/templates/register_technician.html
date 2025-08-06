@@ -1,0 +1,393 @@
+{% extends "register_base.html" %}
+
+{% block title %}Tekniker Kayıt - Teknolojik Servis Yönetimi{% endblock %}
+
+{% block head %}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .fixed-textarea {
+      min-height: 80px;
+      resize: none;
+    }
+    @media (max-width: 768px) {
+      .fixed-textarea {
+        width: 100%;
+      }
+    }
+
+    
+  </style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-3">
+  {% if errors.genel %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      {{ errors.genel }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
+    </div>
+  {% endif %}
+</div>
+
+<div class="container mt-5">
+  <div class="card shadow-lg rounded-4">
+    <div class="card-body p-5">
+      <h3 class="card-title mb-4 text-center">Tekniker Kayıt Formu</h3>
+      <form method="post" action="{{ url_for('register_technician') }}" onsubmit="return validateForm()">
+        <div class="row g-3">
+          <!-- Ad -->
+          <div class="col-md-6">
+            <label for="ad" class="form-label">Ad</label>
+            <input
+              type="text"
+              class="form-control {% if errors.ad %}is-invalid{% endif %}"
+              id="ad"
+              name="ad"
+              value="{{ form.ad | default('') }}"
+              required
+            >
+            {% if errors.ad %}
+              <div class="invalid-feedback">{{ errors.ad }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Soyad -->
+          <div class="col-md-6">
+            <label for="soyad" class="form-label">Soyad</label>
+            <input
+              type="text"
+              class="form-control {% if errors.soyad %}is-invalid{% endif %}"
+              id="soyad"
+              name="soyad"
+              value="{{ form.soyad | default('') }}"
+              required
+            >
+            {% if errors.soyad %}
+              <div class="invalid-feedback">{{ errors.soyad }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Email -->
+          <div class="col-md-6">
+            <label for="email" class="form-label">E-posta</label>
+            <input
+              type="email"
+              class="form-control {% if errors.email %}is-invalid{% endif %}"
+              id="email"
+              name="email"
+              value="{{ form.email | default('') }}"
+              required
+            >
+            {% if errors.email %}
+              <div class="invalid-feedback">{{ errors.email }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Telefon -->
+          <div class="col-md-6">
+            <label for="telefon" class="form-label">Telefon</label>
+            <input
+              type="tel"
+              class="form-control {% if errors.telefon %}is-invalid{% endif %}"
+              id="telefon"
+              name="telefon"
+              maxlength="11"
+              pattern="\d{11}"
+              placeholder="05xxxxxxxxx"
+              value="{{ form.telefon | default('') }}"
+              required
+            >
+            {% if errors.telefon %}
+              <div class="invalid-feedback">{{ errors.telefon }}</div>
+            {% endif %}
+          </div>
+
+          <!-- TC Kimlik -->
+          <div class="col-md-6">
+            <label for="tc" class="form-label">TC Kimlik No</label>
+            <input
+              type="text"
+              class="form-control {% if errors.tc %}is-invalid{% endif %}"
+              id="tc"
+              name="tc"
+              maxlength="11"
+              pattern="\d{11}"
+              placeholder="11 haneli TC no"
+              value="{{ form.tc | default('') }}"
+              required
+            >
+            {% if errors.tc %}
+              <div class="invalid-feedback">{{ errors.tc }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Doğum Tarihi -->
+          <div class="col-md-6">
+            <label for="dogumTarihi" class="form-label">Doğum Tarihi</label>
+            <input
+              type="date"
+              class="form-control {% if errors.dogumTarihi %}is-invalid{% endif %}"
+              id="dogumTarihi"
+              name="dogumTarihi"
+              value="{{ form.dogumTarihi | default('') }}"
+              required
+              onchange="yasKontrol()"
+            >
+            {% if errors.dogumTarihi %}
+              <div class="invalid-feedback d-block">{{ errors.dogumTarihi }}</div>
+            {% else %}
+              <small id="yasUyari" class="text-danger" style="display:none;">18 yaşından küçükler kayıt olamaz!</small>
+            {% endif %}
+          </div>
+
+          <!-- Uzmanlık Alanı -->
+          <div class="col-md-6">
+            <label for="uzmanlik" class="form-label">Uzmanlık Alanı</label>
+            <select
+              class="form-select {% if errors.uzmanlik %}is-invalid{% endif %}"
+              id="uzmanlik"
+              name="uzmanlik"
+              required
+            >
+              <option value="" {% if not form.uzmanlik %}selected{% endif %}>Seçiniz...</option>
+              {% for val in ['Bilgisayar Teknik Servisi', 'Ağ ve Sistem Yönetimi', 'Mobil Cihaz Tamiri', 'Yazılım Geliştirme & Teknik Destek'] %}
+                <option value="{{ val }}" {% if form.uzmanlik == val %}selected{% endif %}>{{ val }}</option>
+              {% endfor %}
+            </select>
+            {% if errors.uzmanlik %}
+              <div class="invalid-feedback">{{ errors.uzmanlik }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Destek Modeli -->
+          <div class="col-md-6">
+            <label for="destek_modeli" class="form-label">Destek Modeli</label>
+            <select
+              class="form-select {% if errors.destek_modeli %}is-invalid{% endif %}"
+              id="destek_modeli"
+              name="destek_modeli"
+              required
+            >
+              <option value="" {% if not form.destek_modeli %}selected{% endif %}>Seçiniz...</option>
+              {% for val in ['Uzaktan Destek', 'Yerinde Servis', 'Atölye & Teknik Merkez'] %}
+                <option value="{{ val }}" {% if form.destek_modeli == val %}selected{% endif %}>{{ val }}</option>
+              {% endfor %}
+            </select>
+            {% if errors.destek_modeli %}
+              <div class="invalid-feedback">{{ errors.destek_modeli }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Tecrübe -->
+          <div class="col-md-6">
+            <label for="tecrube" class="form-label">Tecrübe Yılı</label>
+            <input
+              type="number"
+              class="form-control {% if errors.tecrube %}is-invalid{% endif %}"
+              id="tecrube"
+              name="tecrube"
+              min="0"
+              max="25"
+              placeholder="Örn: 5"
+              value="{{ form.tecrube | default('') }}"
+              required
+            >
+            {% if errors.tecrube %}
+              <div class="invalid-feedback">{{ errors.tecrube }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Konum -->
+          <div class="col-md-6">
+            <label for="konum" class="form-label">Konum (Enlem, Boylam)</label>
+            <div class="input-group">
+              <input
+                type="text"
+                class="form-control {% if errors.konum %}is-invalid{% endif %}"
+                id="konum"
+                name="konum"
+                placeholder="Konum alınamadı"
+                readonly
+                value="{{ form.konum | default('') }}"
+              >
+              <button type="button" class="btn btn-outline-primary" onclick="konumuAl()">Konumu Al</button>
+            </div>
+            {% if errors.konum %}
+              <div class="invalid-feedback d-block">{{ errors.konum }}</div>
+            {% else %}
+              <small id="konumUyari" class="text-danger" style="display:none;">Konum alınması zorunludur!</small>
+            {% endif %}
+          </div>
+
+          <!-- Referans (Opsiyonel) -->
+          <div class="col-md-6">
+            <label for="referans" class="form-label">Referans & İş Geçmişi (Opsiyonel)</label>
+            <textarea
+              class="form-control fixed-textarea"
+              id="referans"
+              name="referans"
+              rows="3"
+              placeholder="Daha önce çalıştığınız projeler, referanslar veya iş deneyimleriniz"
+            >{{ form.referans | default('') }}</textarea>
+          </div>
+
+          <!-- Ek Yetenekler (Opsiyonel) -->
+          <div class="col-md-6">
+            <label for="ek_yetenekler" class="form-label">Ek Yetenekler (Opsiyonel)</label>
+            <textarea
+              class="form-control fixed-textarea"
+              id="ek_yetenekler"
+              name="ek_yetenekler"
+              rows="3"
+              placeholder="Örneğin; ağ güvenliği, veri kurtarma, donanım onarımı gibi ek beceriler"
+            >{{ form.ek_yetenekler | default('') }}</textarea>
+          </div>
+
+          <!-- Şifre -->
+          <div class="col-md-6">
+            <label for="sifre" class="form-label">Şifre</label>
+            <input
+              type="password"
+              class="form-control {% if errors.sifre %}is-invalid{% endif %}"
+              id="sifre"
+              name="sifre"
+              required
+            >
+            {% if errors.sifre %}
+              <div class="invalid-feedback">{{ errors.sifre }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Şifre Onay -->
+          <div class="col-md-6">
+            <label for="sifreOnay" class="form-label">Şifre (Tekrar)</label>
+            <input
+              type="password"
+              class="form-control {% if errors.sifreOnay %}is-invalid{% endif %}"
+              id="sifreOnay"
+              name="sifreOnay"
+              required
+            >
+            {% if errors.sifreOnay %}
+              <div class="invalid-feedback">{{ errors.sifreOnay }}</div>
+            {% else %}
+              <small id="sifreUyari" class="text-danger" style="display:none;">Şifreler eşleşmiyor!</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+          <button type="submit" id="kayitButonu" class="btn btn-secondary btn-lg rounded-3">Kayıt Ol</button>
+        </div>
+
+        <div class="text-center mt-3">
+          <span>Hesabınız var mı? <a style="text-decoration:none;" href="{{ url_for('technician_login') }}" class="text-primary fw-bold"><br>Tekniker Giriş</a></span>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Konum alma fonksiyonu
+  function konumuAl() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const enlem = position.coords.latitude.toFixed(5);
+        const boylam = position.coords.longitude.toFixed(5);
+        document.getElementById("konum").value = `${enlem}, ${boylam}`;
+        document.getElementById("konumUyari").style.display = "none";
+      }, function(error) {
+        alert("Konum alınamadı: " + error.message);
+      });
+    } else {
+      alert("Tarayıcınız konum özelliğini desteklemiyor.");
+    }
+  }
+
+  // TC ve Telefon alanlarına sadece rakam ve max 11 karakter girilebilir
+  document.addEventListener('DOMContentLoaded', function() {
+    const tcInput = document.getElementById("tc");
+    const telefonInput = document.getElementById("telefon");
+
+    tcInput.addEventListener("input", function () {
+      this.value = this.value.replace(/\D/g, '').slice(0, 11);
+    });
+
+    telefonInput.addEventListener("input", function () {
+      this.value = this.value.replace(/\D/g, '').slice(0, 11);
+    });
+  });
+
+  // 18 yaş kontrolü
+  function yasKontrol() {
+    const dogumTarihi = document.getElementById("dogumTarihi").value;
+    if (!dogumTarihi) return;
+
+    const today = new Date();
+    const dogum = new Date(dogumTarihi);
+
+    let yas = today.getFullYear() - dogum.getFullYear();
+    const ayFark = today.getMonth() - dogum.getMonth();
+    const gunFark = today.getDate() - dogum.getDate();
+
+    if (ayFark < 0 || (ayFark === 0 && gunFark < 0)) {
+      yas--;
+    }
+
+    const yasUyari = document.getElementById("yasUyari");
+    const kayitButonu = document.getElementById("kayitButonu");
+
+    if (yas < 18) {
+      yasUyari.style.display = "block";
+      kayitButonu.disabled = true;
+    } else {
+      yasUyari.style.display = "none";
+      kayitButonu.disabled = false;
+    }
+  }
+
+  // Form gönderiminde şifre ve konum kontrolü
+  function validateForm() {
+    const konum = document.getElementById("konum").value.trim();
+    const sifre = document.getElementById("sifre").value;
+    const sifreOnay = document.getElementById("sifreOnay").value;
+
+    let valid = true;
+
+    if (!konum) {
+      document.getElementById("konumUyari").style.display = "block";
+      valid = false;
+    } else {
+      document.getElementById("konumUyari").style.display = "none";
+    }
+
+    if (sifre !== sifreOnay) {
+      document.getElementById("sifreUyari").style.display = "block";
+      valid = false;
+    } else {
+      document.getElementById("sifreUyari").style.display = "none";
+    }
+
+    return valid;
+  }
+
+  // Canlı şifre eşleşme kontrolü
+  document.addEventListener('DOMContentLoaded', function() {
+    const sifreInput = document.getElementById("sifre");
+    const sifreOnayInput = document.getElementById("sifreOnay");
+
+    sifreOnayInput.addEventListener("input", function() {
+      const sifre = sifreInput.value;
+      const sifreOnay = this.value;
+      if (sifre !== sifreOnay) {
+        document.getElementById("sifreUyari").style.display = "block";
+      } else {
+        document.getElementById("sifreUyari").style.display = "none";
+      }
+    });
+  });
+</script>
+
+{% endblock %}

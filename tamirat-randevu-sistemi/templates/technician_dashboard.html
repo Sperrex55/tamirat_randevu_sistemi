@@ -1,0 +1,271 @@
+{% extends "base_technician.html" %}
+
+{% block title %}Teknisyen Paneli{% endblock %}
+
+{% block head %}
+<style>
+/* Ortak geçiş efekti */
+.transition {
+  transition: all 0.3s ease;
+}
+
+/* Kart hover efekti ve gölge */
+.hover-scale {
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+.hover-scale:hover {
+  transform: translateY(-5px) scale(1.04);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+/* İstatistik kartları için ikon kutusu */
+.stat-icon {
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #e9f2ff;
+  font-size: 2.7rem;
+  margin-bottom: 0.9rem;
+  box-shadow: 0 0.5rem 0.8rem rgba(13, 110, 253, 0.15);
+  transition: background-color 0.35s ease, color 0.35s ease, transform 0.3s ease;
+}
+
+.hover-scale:hover .stat-icon {
+  background-color: #000000;
+  color: #fff;
+  transform: rotate(8deg);
+}
+
+/* Başlık ve sayı */
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #495057;
+}
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .stat-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 2.2rem;
+  }
+  .card-title {
+    font-size: 1.05rem;
+  }
+  .stat-value {
+    font-size: 1.6rem;
+  }
+}
+
+/* Duyuru Kartı */
+.announcement-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+.announcement-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+/* Başlık kısmı */
+.announcement-card header h5 {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #2563eb;
+}
+
+/* Tarih kısmı */
+.announcement-card header time {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+/* İçerik kısmı */
+.announcement-content {
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+/* Bilgilendirme kutusu (boş duyuru) */
+.alert-info {
+  background-color: #e0f2fe;
+  color: #0c4a6e;
+  border: none;
+}
+
+/* ---------------------------------- */
+/*            DARK MODE              */
+/* ---------------------------------- */
+[data-bs-theme="dark"] .stat-icon {
+  background-color: #1f2a37;
+  box-shadow: 0 0.5rem 0.8rem rgba(255, 255, 255, 0.05);
+}
+[data-bs-theme="dark"] .card-title {
+  color: #e5e7eb;
+}
+[data-bs-theme="dark"] .stat-value {
+  color: #f3f4f6;
+}
+[data-bs-theme="dark"] .announcement-card {
+  background-color: #1e293b;
+  box-shadow: 0 10px 30px rgba(255, 255, 255, 0.05);
+}
+[data-bs-theme="dark"] .announcement-card:hover {
+  box-shadow: 0 20px 50px rgba(255, 255, 255, 0.08);
+}
+[data-bs-theme="dark"] .announcement-card header h5 {
+  color: #60a5fa;
+}
+[data-bs-theme="dark"] .announcement-card header time {
+  color: #9ca3af;
+}
+[data-bs-theme="dark"] .announcement-content {
+  color: #d1d5db;
+}
+[data-bs-theme="dark"] .alert-info {
+  background-color: #334155;
+  color: #cbd5e1;
+}
+
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+      {% for category, message in messages %}
+        <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+            <div class="toast-body">{{ message }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="container my-5">
+
+  <!-- Hoşgeldin Mesajı -->
+  <div class="text-center mb-5">
+    <h2 class="display-5 fw-semibold">👋 Hoş geldin, <span class="text-primary">{{ technician.ad }} {{ technician.soyad }}</span></h2>
+    <p class="text-muted fs-5">📌 Uzmanlık Alanı: <strong>{{ technician.uzmanlik }}</strong></p>
+  </div>
+
+  <div class="row g-4">
+  {% for stat in [
+    {'icon': 'calendar-check', 'color': 'success', 'title': 'Toplam Randevu', 'value': total_appointments},
+    {'icon': 'clock-history', 'color': 'warning', 'title': 'Bekleyen Randevular', 'value': pending_appointments},
+    {'icon': 'check2-circle', 'color': 'primary', 'title': 'Tamamlanan Randevular', 'value': completed_appointments},
+    {'icon': 'envelope-paper', 'color': 'danger', 'title': 'Gelen Mesajlar', 'value': total_messages}
+  ] %}
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-4 bg-light h-100 d-flex flex-column justify-content-center align-items-center text-center hover-scale">
+        <div class="stat-icon text-{{ stat.color }}">
+          <i class="bi bi-{{ stat.icon }}"></i>
+        </div>
+        <h5 class="card-title">{{ stat.title }}</h5>
+        <div class="stat-value text-{{ stat.color }}">{{ stat.value }}</div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+
+  <!-- Güncel Duyurular -->
+  <section class="mt-5">
+    <h3 class="fw-bold border-start border-4 border-primary ps-3 mb-4">📢 Güncel Duyurular</h3>
+    {% if announcements %}
+      <div class="row gy-3">
+        {% for duyuru in announcements %}
+          <div class="col-12">
+            <article class="announcement-card">
+              <header class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="fw-semibold text-primary m-0">
+                  <i class="bi bi-megaphone-fill me-2"></i>{{ duyuru.title }}
+                </h5>
+                <time class="text-muted small" datetime="{{ duyuru.date_created.isoformat() }}">{{ duyuru.date_created.strftime('%d.%m.%Y %H:%M') }}</time>
+              </header>
+              <p class="announcement-content mb-0">{{ duyuru.content }}</p>
+            </article>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info d-flex align-items-center gap-2 rounded-3 shadow-sm">
+        <i class="bi bi-info-circle-fill fs-4"></i>
+        Henüz duyuru bulunmamaktadır.
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Son Randevular Listesi -->
+  <section class="mt-5">
+    <h4 class="fw-bold border-bottom pb-2 mb-4"><i class="bi bi-list-task me-2 text-primary"></i> Son Randevular</h4>
+
+    {% if recent_appointments %}
+      <div class="list-group">
+        {% for appt in recent_appointments %}
+          <div tabindex="0" class="list-group-item d-flex justify-content-between align-items-start appointment-item shadow-sm mb-3 rounded-3" role="button" aria-expanded="false" aria-controls="apptDetails{{ loop.index }}">
+            <div class="ms-2 me-auto">
+              <div class="fw-semibold fs-6">{{ appt.customer_name }} — <span class="text-muted fst-italic">{{ appt.category }}</span></div>
+              <small class="text-muted d-block">📅 {{ appt.date.strftime('%d %B %Y, %H:%M') }}</small>
+              <small class="text-muted d-block">📌 Durum: <span class="fw-semibold">{{ appt.status }}</span></small>
+            </div>
+            {% if appt.status == 'Tamamlandı' %}
+              <span class="badge bg-primary rounded-pill appointment-status-badge" aria-label="Tamamlandı">✓</span>
+            {% elif appt.status == 'Beklemede' %}
+              <span class="badge bg-warning text-dark rounded-pill appointment-status-badge" aria-label="Beklemede">⏳</span>
+            {% elif appt.status == 'İptal' %}
+              <span class="badge bg-danger rounded-pill appointment-status-badge" aria-label="İptal">✖</span>
+            {% endif %}
+          </div>
+          <!-- Ayrıntı paneli - JS ile açılıp kapanabilir -->
+          <div class="collapse mb-4" id="apptDetails{{ loop.index }}">
+            <div class="card card-body bg-light shadow-sm rounded-3">
+              <p><strong>Detaylar:</strong></p>
+              <p>{{ appt.description or "Detay bilgisi yok." }}</p>
+              <!-- İsterseniz burada daha fazla detay gösterilebilir -->
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info text-center rounded-3 shadow-sm">
+        <i class="bi bi-info-circle"></i> Henüz randevu kaydı yok.
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Liste öğesine tıklayınca detay collapse toggle
+  document.querySelectorAll('.appointment-item').forEach((item, idx) => {
+    item.addEventListener('click', () => {
+      const details = document.getElementById(`apptDetails${idx+1}`);
+      if (!details) return;
+      const bsCollapse = new bootstrap.Collapse(details, { toggle: true });
+    });
+  });
+</script>
+{% endblock %}

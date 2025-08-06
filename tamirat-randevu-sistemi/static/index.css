@@ -1,0 +1,429 @@
+/* Varsayılan Tema Değişkenleri */
+:root {
+  --color-primary: #1f2937; /* koyu gri/mavi ton */
+  --color-primary-light: #3b82f6; /* açık mavi */
+  --color-text-base: #374151; /* nötr gri */
+  --color-text-muted: #6b7280; /* daha açık gri */
+  --color-bg-light: #ffffff; /* beyaz */
+  --border-radius: 0.75rem;
+  --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Genel Gövde Stili */
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--color-bg-light);
+  color: var(--color-text-base);
+  line-height: 1.6;
+  margin: 0;
+  padding-top: 70px; /* base.html sabit navbar yüksekliği için */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Ana içerik alanının footer’a itmesi için */
+main.container {
+  flex-grow: 1;
+}
+
+/* HERO BÖLÜMÜ - Kayan Arka Plan */
+@keyframes backgroundScroll {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.hero-section {
+  position: relative;
+  background-image: url('/static/images/anasayfa.jpg');
+  background-repeat: repeat-x;
+  background-size: cover;
+  background-position: 0% center;
+  animation: backgroundScroll 60s linear infinite;
+  border-radius: var(--border-radius);
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: white;
+  text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-light);
+  margin-top: 2rem;
+}
+
+.hero-section h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.hero-section p {
+  font-size: 1.25rem;
+  font-weight: 400;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.hero-section .btn-warning {
+  padding: 12px 20px;
+  font-size: 20px;
+  transition: all 0.3s ease;
+}
+
+.hero-section .btn-warning:hover {
+  background: #ff9800;
+  color: white;
+}
+
+/* Özellik Kartları */
+.feature-card, .card {
+  background: var(--color-bg-light);
+  padding: 30px;
+  border-radius: var(--border-radius);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: var(--shadow-light);
+  cursor: default;
+}
+
+.feature-card:hover, .card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.card i {
+  font-size: 3.5rem;
+  color: var(--color-primary-light);
+  margin-bottom: 1rem;
+  transition: color 0.3s ease;
+}
+
+.card:hover i {
+  color: #1e40af;
+}
+
+.card h3 {
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.card p {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* Accordion Genel Stil */
+.accordion-item {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  border: 1px solid #004085;
+}
+
+/* Accordion Buton */
+.accordion-button {
+  font-weight: bold;
+  background: linear-gradient(to right, #0056b3, #004085);
+  color: white;
+  padding: 15px;
+  box-shadow: none;
+  transition: none;
+}
+
+.accordion-button:hover {
+  background: #003366;
+}
+
+.accordion-button:not(.collapsed) {
+  background: linear-gradient(to right, #0056b3, #004085);
+  color: white;
+  box-shadow: none;
+}
+
+/* Accordion İçeriği */
+.accordion-body {
+  font-size: 1.1rem;
+  color: #555;
+  padding: 15px;
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+
+/* Responsive ayarlamalar */
+@media (max-width: 768px) {
+  .hero-section {
+    height: 300px;
+  }
+  .hero-section h1 {
+    font-size: 2.25rem;
+  }
+  .hero-section p {
+    font-size: 1rem;
+  }
+}
+
+/* Navbar ve Footer İçin Özel Stiller */
+
+.navbar {
+  padding: 12px;
+  background: linear-gradient(to right, #0056b3, #004085);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: fixed;
+  width: 100%;
+  top: 0;
+  z-index: 1030;
+}
+
+.navbar-brand i {
+  color: #ffd700;
+}
+
+.navbar-nav .nav-link {
+  color: #f8f9fa;
+  transition: color 0.3s ease;
+  padding: 10px;
+}
+
+.navbar-nav .nav-link.btn-outline-light {
+  border: 2px solid white;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: all 0.3s ease-in-out;
+  margin: 5px;
+}
+
+.navbar-nav .nav-link.btn-outline-light:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFD700;
+  border-color: #FFD700;
+  box-shadow: 0px 2px 8px rgba(255, 215, 0, 0.3);
+  transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+  .navbar-nav {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .nav-link {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .navbar {
+    padding: 8px;
+  }
+  
+  .navbar-nav .nav-link.btn-outline-light {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+}
+
+/* Footer */
+
+.footer {
+  background: linear-gradient(to right, #004085, #003366);
+  font-size: 14px;
+  padding: 30px 0;
+  text-align: center;
+  width: 100%;
+  margin-top: auto;
+  color: #f8f9fa;
+}
+
+.footer-link {
+  color: #f8f9fa;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.footer-link:hover {
+  color: #ffd700;
+  text-decoration: underline;
+}
+
+.social-link {
+  color: #ffffff;
+  transition: all 0.3s ease;
+  font-size:15px;
+}
+
+.social-link:hover {
+  color: #ffd700;
+  transform: translateY(-3px) scale(1.1);
+}
+
+/* Modal Butonlar */
+.modal-body button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Animasyonlar */
+@keyframes fadeSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-section h1,
+.hero-section p {
+  animation-fill-mode: both;
+  animation-timing-function: ease-out;
+  animation-duration: 0.4s;
+  opacity: 0;
+}
+
+.hero-section h1 {
+  animation-name: fadeSlideUp;
+  animation-delay: 0.3s;
+  animation-fill-mode: forwards;
+}
+
+.hero-section p {
+  animation-name: fadeSlideUp;
+  animation-delay: 0.7s;
+  animation-fill-mode: forwards;
+}
+
+/* DARK MODE */
+
+body.dark-mode {
+  --color-bg-light: #121212;
+  --color-text-base: #e0e0e0;
+  --color-text-muted: #a0a0a0;
+  --color-primary: #90cdf4;
+  --color-primary-light: #63b3ed;
+  background-color: #121212;
+  color: var(--color-text-base);
+}
+
+body.dark-mode .card, 
+body.dark-mode .feature-card {
+  background-color: #1e1e1e;
+  color: var(--color-text-base);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.6);
+}
+
+body.dark-mode .card p {
+  color: var(--color-text-muted);
+}
+
+body.dark-mode .accordion-button {
+  background: #1a1a1a;
+  color: var(--color-text-base);
+  border-color: #444;
+}
+
+body.dark-mode .accordion-button:hover {
+  background: #333;
+}
+
+body.dark-mode .accordion-button:not(.collapsed) {
+  background: #222;
+  color: var(--color-primary-light);
+  border-color: #666;
+}
+
+body.dark-mode .accordion-body {
+  background-color: #121212;
+  color: var(--color-text-base);
+  border-color: #333;
+}
+
+body.dark-mode .footer {
+  background: #1a1a1a;
+  color: var(--color-text-base);
+}
+
+body.dark-mode .footer-link {
+  color: var(--color-text-muted);
+}
+
+body.dark-mode .footer-link:hover {
+  color: var(--color-primary-light);
+}
+
+body.dark-mode .navbar {
+  background: #004085;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+
+body.dark-mode .navbar-brand i {
+  color: #ffd700;
+}
+
+body.dark-mode .navbar-nav .nav-link {
+  color: #e0e0e0;
+}
+
+body.dark-mode .navbar-nav .nav-link.btn-outline-light {
+  border-color: #ccc;
+  color: #ccc;
+}
+
+body.dark-mode .navbar-nav .nav-link.btn-outline-light:hover {
+  background: rgba(204, 204, 204, 0.2);
+  color: #ffd700;
+  border-color: #ffd700;
+  box-shadow: 0px 2px 8px rgba(255, 215, 0, 0.3);
+  transform: scale(1.02);
+}
+
+/* Responsive Mobil Nav */
+
+@media (max-width: 768px) {
+  .navbar-nav {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .nav-link {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .navbar {
+    padding: 8px;
+  }
+
+  .footer {
+    padding: 20px;
+  }
+
+  .navbar-nav .nav-link.btn-outline-light {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
+  .social-link {
+    font-size: 20px;
+  }
+}

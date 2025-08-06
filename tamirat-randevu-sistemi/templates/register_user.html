@@ -1,0 +1,237 @@
+{% extends "register_base.html" %}
+
+{% block title %}Üye Kayıt - Teknolojik Servis Yönetimi{% endblock %}
+
+{% block head %}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .form-label::after {
+      content: " *";
+      color: red;
+    }
+    .toggle-password {
+      cursor: pointer;
+      user-select: none;
+    }
+    .spinner-border.spinner-border-sm {
+  width: 1.2rem;              /* Biraz daha büyük ve rahat görünür */
+  height: 1.2rem;
+  vertical-align: middle;     /* Text-bottom yerine orta hizalama */
+  margin-left: 0.5rem;
+  border-width: 0.15em;       /* Daha ince ama belirgin kenar */
+  border-top-color: #0d6efd;  /* Bootstrap'in primary mavi tonu */
+  border-right-color: transparent; /* Transparan kenarlarla dönen efekt */
+  animation: spinner-border-sm-spin 0.8s linear infinite; /* Daha hızlı ve yumuşak dönüş */
+  border-radius: 50%;         /* Tam yuvarlak */
+  display: inline-block;
+}
+
+@keyframes spinner-border-sm-spin {
+  to { transform: rotate(360deg); }
+}
+
+  </style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+  {% if errors and errors.genel %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      {{ errors.genel }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        {% set bs_category = 'danger' if category == 'error' else category %}
+        <div class="alert alert-{{ bs_category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="card shadow-lg rounded-4">
+    <div class="card-body p-5">
+      <h3 class="card-title mb-4 text-center">Üye Kayıt Formu</h3>
+
+      <form method="post" action="{{ url_for('register_user') }}" autocomplete="off" class="needs-validation" novalidate>
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <label for="ad" class="form-label">Ad</label>
+            <input type="text" class="form-control {% if errors and errors.get('ad') %}is-invalid{% endif %}" id="ad" name="ad" placeholder="Adınızı giriniz" required
+                   value="{{ form.ad if form else '' }}">
+            <div class="invalid-feedback">{{ errors.ad if errors and errors.get('ad') else 'Lütfen adınızı giriniz.' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="soyad" class="form-label">Soyad</label>
+            <input type="text" class="form-control {% if errors and errors.get('soyad') %}is-invalid{% endif %}" id="soyad" name="soyad" placeholder="Soyadınızı giriniz" required
+                   value="{{ form.soyad if form else '' }}">
+            <div class="invalid-feedback">{{ errors.soyad if errors and errors.get('soyad') else 'Lütfen soyadınızı giriniz.' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="email" class="form-label">E-posta</label>
+            <input type="email" class="form-control {% if errors and errors.get('email') %}is-invalid{% endif %}" id="email" name="email" placeholder="ornek@mail.com" required
+                   value="{{ form.email if form else '' }}">
+            <div class="invalid-feedback">{{ errors.email if errors and errors.get('email') else 'Lütfen geçerli bir e-posta giriniz.' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="tc" class="form-label">TC Kimlik No</label>
+            <input type="text" class="form-control {% if errors and errors.get('tc') %}is-invalid{% endif %}" id="tc" name="tc" maxlength="11" pattern="\d{11}" placeholder="11 haneli TC No" required
+                   value="{{ form.tc if form else '' }}">
+            <div class="invalid-feedback">{{ errors.tc if errors and errors.get('tc') else 'Lütfen 11 haneli geçerli TC Kimlik No giriniz.' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="telefon" class="form-label">Telefon</label>
+            <input type="tel" class="form-control {% if errors and errors.get('telefon') %}is-invalid{% endif %}" id="telefon" name="telefon" maxlength="11" pattern="\d{11}" placeholder="05xxxxxxxxx" required
+                   value="{{ form.telefon if form else '' }}">
+            <div class="invalid-feedback">{{ errors.telefon if errors and errors.get('telefon') else 'Lütfen 11 haneli geçerli telefon numarası giriniz.' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="dogumTarihi" class="form-label">Doğum Tarihi</label>
+            <input type="date" class="form-control {% if errors and errors.get('dogumTarihi') %}is-invalid{% endif %}" id="dogumTarihi" name="dogumTarihi" required
+                   value="{{ form.dogumTarihi if form else '' }}">
+            <div class="invalid-feedback">{{ errors.dogumTarihi if errors and errors.get('dogumTarihi') else 'Lütfen doğum tarihinizi seçiniz.' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="cinsiyet" class="form-label">Cinsiyet</label>
+            <select class="form-select {% if errors and errors.get('cinsiyet') %}is-invalid{% endif %}" id="cinsiyet" name="cinsiyet" required>
+              <option value="" {% if not form or not form.cinsiyet %}selected{% endif %}>Seçiniz...</option>
+              <option value="Erkek" {% if form and form.cinsiyet == 'Erkek' %}selected{% endif %}>Erkek</option>
+              <option value="Kadın" {% if form and form.cinsiyet == 'Kadın' %}selected{% endif %}>Kadın</option>
+            </select>
+            <div class="invalid-feedback">{{ errors.cinsiyet if errors and errors.get('cinsiyet') else 'Lütfen cinsiyet seçiniz.' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="konum" class="form-label">Konum (Enlem, Boylam)</label>
+            <div class="input-group">
+              <input type="text" class="form-control {% if errors and errors.get('konum') %}is-invalid{% endif %}" id="konum" name="konum" placeholder="Konum alınamadı" readonly required
+                     value="{{ form.konum if form else '' }}">
+              <button type="button" id="konumBtn" class="btn btn-outline-primary" onclick="konumuAl()">Konumu Al</button>
+              <span id="konumSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+            </div>
+            <div class="invalid-feedback">{{ errors.konum if errors and errors.get('konum') else 'Lütfen konumu alınız.' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="sifre" class="form-label">Şifre</label>
+            <div class="input-group">
+              <input type="password" class="form-control {% if errors and errors.get('sifre') %}is-invalid{% endif %}" id="sifre" name="sifre" required>
+              <span class="input-group-text toggle-password" onclick="togglePassword('sifre')" title="Şifreyi göster/gizle">👁</span>
+              <div class="invalid-feedback">{{ errors.sifre if errors and errors.get('sifre') else 'Lütfen şifre giriniz.' }}</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="sifreOnay" class="form-label">Şifre (Tekrar)</label>
+            <div class="input-group">
+              <input type="password" class="form-control {% if errors and errors.get('sifreOnay') %}is-invalid{% endif %}" id="sifreOnay" name="sifreOnay" required>
+              <span class="input-group-text toggle-password" onclick="togglePassword('sifreOnay')" title="Şifreyi göster/gizle">👁</span>
+              <div class="invalid-feedback" id="sifreOnayFeedback">{{ errors.sifreOnay if errors and errors.get('sifreOnay') else 'Lütfen şifre tekrarını giriniz.' }}</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+          <button type="submit" class="btn btn-success btn-lg rounded-3">Kayıt Ol</button>
+        </div>
+
+        <div class="text-center mt-3">
+          <span>Zaten hesabınız var mı? <a href="{{ url_for('user_login') }}" class="fw-bold text-decoration-none"><br>Giriş Yap</a></span>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const form = document.querySelector('form.needs-validation');
+  const sifre = document.getElementById('sifre');
+  const sifreOnay = document.getElementById('sifreOnay');
+  const sifreOnayFeedback = document.getElementById('sifreOnayFeedback');
+  const konumBtn = document.getElementById('konumBtn');
+  const konumSpinner = document.getElementById('konumSpinner');
+
+  // Sadece rakam kabul et, maksimum 11 karakter
+  ['tc', 'telefon'].forEach(id => {
+    const input = document.getElementById(id);
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/\D/g, '').slice(0, 11);
+    });
+  });
+
+  // Şifre eşleşmesi kontrolü ve form validasyon
+  form.addEventListener('submit', function(event) {
+    // Reset şifreOnay invalid sınıfı
+    sifreOnay.classList.remove('is-invalid');
+    sifreOnayFeedback.textContent = 'Lütfen şifre tekrarını giriniz.';
+
+    if (form.checkValidity() === false) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (sifre.value !== sifreOnay.value) {
+      event.preventDefault();
+      event.stopPropagation();
+      sifreOnay.classList.add('is-invalid');
+      sifreOnayFeedback.textContent = 'Şifreler eşleşmiyor!';
+    }
+
+    form.classList.add('was-validated');
+  });
+
+  // Şifre göster/gizle
+  window.togglePassword = function(id) {
+    const input = document.getElementById(id);
+    input.type = input.type === "password" ? "text" : "password";
+  }
+
+  // Konum alma fonksiyonu
+  window.konumuAl = function() {
+    konumBtn.disabled = true;
+    konumSpinner.classList.remove('d-none');
+
+    if (!navigator.geolocation) {
+      alert('Tarayıcınız konum özelliğini desteklemiyor.');
+      konumBtn.disabled = false;
+      konumSpinner.classList.add('d-none');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        const enlem = position.coords.latitude.toFixed(5);
+        const boylam = position.coords.longitude.toFixed(5);
+        document.getElementById('konum').value = `${enlem}, ${boylam}`;
+        konumBtn.disabled = false;
+        konumSpinner.classList.add('d-none');
+      },
+      function(error) {
+        alert('Konum alınamadı: ' + error.message);
+        konumBtn.disabled = false;
+        konumSpinner.classList.add('d-none');
+      }
+    );
+  };
+})();
+</script>
+
+{% endblock %}

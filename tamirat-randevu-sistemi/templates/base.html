@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="tr" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Teknolojik Servis Yönetimi{% endblock %}</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&display=swap" rel="stylesheet" />
+
+  <!-- Özel CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+  <style>
+  /* Tema: Dark */
+  [data-bs-theme="dark"] body {
+    background-color: #121212;
+    color: #e4e4e4;
+  }
+
+  [data-bs-theme="dark"] .navbar,
+  [data-bs-theme="dark"] .footer,
+  [data-bs-theme="dark"] .bg-primary {
+    background-color: #1f1f1f !important;
+  }
+
+  [data-bs-theme="dark"] .card {
+    background-color: #1e1e1e;
+    border-color: #444;
+  }
+
+  [data-bs-theme="dark"] .modal-content {
+    background-color: #222;
+    color: #fff;
+  }
+
+  [data-bs-theme="dark"] .form-control {
+    background-color: #2a2a2a;
+    color: #fff;
+    border-color: #555;
+  }
+
+  [data-bs-theme="dark"] .footer-link,
+  [data-bs-theme="dark"] .social-link {
+    color: #ccc;
+  }
+
+  .form-check-input:checked {
+    background-color: #f8f9fa;
+    border-color: #f8f9fa;
+  }
+
+  .form-check-input {
+    cursor: pointer;
+  }
+
+  .form-check-label {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* Sağ alt tema butonu */
+  #themeToggleBtn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1080;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background-color: #4e54c8;
+    color: white;
+    font-size: 0; /* Metin gizle */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+    overflow: visible;
+  }
+  #themeToggleBtn:hover {
+    background-color: #8f94fb;
+  }
+
+  /* Dark modda buton rengi */
+  [data-bs-theme="dark"] #themeToggleBtn {
+    background-color: #222;
+    color: #f1f1f1;
+  }
+  [data-bs-theme="dark"] #themeToggleBtn:hover {
+    background-color: #555;
+  }
+
+  /* Ay ve Güneş simgeleri (pseudo elementler) */
+  #themeToggleBtn::before,
+  #themeToggleBtn::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center center;
+    transform-style: preserve-3d;
+    font-size: 24px;
+    user-select: none;
+    pointer-events: none;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+  }
+
+  #themeToggleBtn::before {
+    content: "🌙"; /* Ay simgesi */
+    color: #fff;
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+    opacity: 1;
+    z-index: 2;
+  }
+
+  #themeToggleBtn::after {
+    content: "☀️"; /* Güneş simgesi */
+    color: #fcd440;
+    transform: translate(-50%, -50%) translateY(-10px) scale(0.5);
+    opacity: 0;
+    z-index: 1;
+  }
+
+  /* Dark modda animasyonlu geçiş */
+  [data-bs-theme="dark"] #themeToggleBtn::before {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(10px) scale(0.5);
+    z-index: 1;
+  }
+
+  [data-bs-theme="dark"] #themeToggleBtn::after {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+    z-index: 2;
+  }
+
+  /* Mobilde biraz büyütülmüş */
+@media (max-width: 575.98px) {
+  #themeToggleBtn {
+    width: 50px !important;
+    height: 50px !important;
+    bottom: 20px !important;
+    right: 20px !important;
+  }
+  #themeToggleBtn::before,
+  #themeToggleBtn::after {
+    font-size: 24px !important;
+  }
+}
+
+</style>
+
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm fixed-top">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
+        <i class="fas fa-tools text-white"></i> Servis Yönetimi
+      </a>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarNav"
+        aria-controls="navbarNav"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('index') }}">Ana Sayfa</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('about') }}">Hakkımızda</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('contact') }}">İletişim</a>
+          </li>
+        </ul>
+        <ul class="navbar-nav ms-3">
+          <li class="nav-item">
+            <a
+              class="nav-link btn btn-outline-light"
+              href="#"
+              data-bs-toggle="modal"
+              data-bs-target="#loginModal"
+            >
+              <i class="fas fa-sign-in-alt"></i> Giriş Yap
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link btn btn-outline-light"
+              href="#"
+              data-bs-toggle="modal"
+              data-bs-target="#registerModal"
+            >
+              <i class="fas fa-user-plus"></i> Kayıt Ol
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Giriş Modal -->
+  <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4 rounded-lg border-0 text-center">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold text-primary w-100">Kim olarak giriş yapmak istiyorsunuz?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form method="POST" action="{{ url_for('choose_login') }}">
+            <button type="submit" name="role" value="user" class="btn btn-primary btn-lg w-100 mb-2">
+              <i class="fas fa-user me-2"></i> Üye Girişi
+            </button>
+            <button
+              type="submit"
+              name="role"
+              value="technician"
+              class="btn btn-secondary btn-lg w-100 mb-2"
+            >
+              <i class="fas fa-user-cog me-2"></i> Tekniker Girişi
+            </button>
+            <a href="{{ url_for('admin_login') }}" class="btn btn-warning btn-lg w-100 text-dark">
+              <i class="fas fa-user-shield me-2"></i> Admin Girişi
+            </a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kayıt Modal -->
+  <div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4 rounded-lg border-0 text-center">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold text-primary w-100">Kim olarak kayıt olmak istiyorsunuz?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form method="POST" action="{{ url_for('choose_register') }}">
+            <button type="submit" name="role" value="user" class="btn btn-primary btn-lg w-100 mb-2">
+              <i class="fas fa-user me-2"></i> Üye Kayıt
+            </button>
+            <button type="submit" name="role" value="technician" class="btn btn-secondary btn-lg w-100">
+              <i class="fas fa-user-cog me-2"></i> Tekniker Kayıt
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="container mt-lg-3">{% block content %}{% endblock %}</main>
+
+  <footer class="footer bg-primary text-white text-center py-5 mt-5">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 mb-4 mb-md-0">
+          <h5 class="fw-bold text-light mb-3">Hakkımızda</h5>
+          <p class="text-white-50">
+            Teknolojik Servis Yönetimi ile tamirat ve tadilat süreçleriniz hızlı, kolay ve güvenilir.
+          </p>
+        </div>
+        <div class="col-md-4 mb-4 mb-md-0">
+          <h5 class="fw-bold text-light mb-3">Bağlantılar</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{ url_for('index') }}" class="footer-link">Ana Sayfa</a></li>
+            <li><a href="{{ url_for('about') }}" class="footer-link">Hakkımızda</a></li>
+            <li><a href="{{ url_for('contact') }}" class="footer-link">İletişim</a></li>
+          </ul>
+        </div>
+        <div class="col-md-4">
+          <h5 class="fw-bold text-light mb-3">Bizi Takip Et</h5>
+          <div class="d-flex justify-content-center gap-3">
+            <a href="https://www.instagram.com/ard__5555" target="_blank" class="social-link">
+              <i class="fab fa-instagram fa-xl"></i>
+            </a>
+            <a href="#" target="_blank" class="social-link">
+              <i class="fab fa-youtube fa-xl"></i>
+            </a>
+            <a href="#" target="_blank" class="social-link">
+              <i class="fab fa-twitter fa-xl"></i>
+            </a>
+            <a href="#" target="_blank" class="social-link">
+              <i class="fab fa-tiktok fa-xl"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+      <hr class="my-4 border-light" />
+      <p class="mb-0 text-white-50">&copy; 2025 Teknolojik Servis Yönetimi | Tüm Hakları Saklıdır.</p>
+    </div>
+  </footer>
+
+  <!-- Tema Değiştir Butonu -->
+<button id="themeToggleBtn" aria-label="Temayı değiştir" title="Temayı değiştir" type="button"></button>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Tema JS -->
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('themeToggleBtn');
+  const htmlTag = document.documentElement;
+
+  // Temayı uygula ve buton simgesini güncelle
+  function applyTheme(isDark) {
+    htmlTag.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+    btn.textContent = isDark ? '☀️' : '🌙'; // Güneş - Ay simgesi
+  }
+
+  // LocalStorage'dan kayıtlı tema varsa uygula
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    applyTheme(true);
+  } else {
+    applyTheme(false);
+  }
+
+  // Butona tıklanınca tema değiştir ve kaydet
+  btn.addEventListener('click', () => {
+    const isDark = htmlTag.getAttribute('data-bs-theme') === 'dark';
+    applyTheme(!isDark);
+    localStorage.setItem('theme', !isDark ? 'dark' : 'light');
+  });
+});
+
+
+  </script>
+</body>
+</html>
+  

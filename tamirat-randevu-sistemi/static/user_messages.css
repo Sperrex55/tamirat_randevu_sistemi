@@ -1,0 +1,445 @@
+:root {
+  /* Genel Renkler */
+  --bg-body: #f5f7fb;
+  --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+  /* Listeler */
+  --list-bg: #fff;
+  --list-border-bottom: #e9ecef;
+  --list-text: #333;
+  --list-hover-bg: #e9f0ff;
+  --list-hover-color: #0d6efd;
+  --list-hover-shadow: rgba(13, 110, 253, 0.15);
+  --list-active-bg-gradient: linear-gradient(135deg, #0d6efd, #6c63ff);
+  --list-active-color: #fff;
+  --list-active-shadow: rgba(13, 110, 253, 0.4);
+
+  /* Kartlar */
+  --card-bg: #fff;
+  --card-shadow: rgba(0, 0, 0, 0.07);
+  --card-shadow-hover: rgba(0, 0, 0, 0.12);
+  --card-header-bg-gradient: linear-gradient(135deg, #0d6efd, #6c63ff);
+  --card-header-color: #fff;
+
+  /* Butonlar */
+  --btn-primary-bg-gradient: linear-gradient(135deg, #0d6efd, #6c63ff);
+  --btn-primary-bg-hover-gradient: linear-gradient(135deg, #053aab, #4b45f2);
+  --btn-primary-shadow: rgba(108, 99, 255, 0.5);
+  --btn-primary-shadow-hover: rgba(13, 110, 253, 0.45);
+  --btn-primary-disabled-bg: #a0aaff;
+
+  /* Textarea */
+  --textarea-border: #d1d7e0;
+  --textarea-border-focus: #6c63ff;
+  --textarea-shadow-focus: rgba(108, 99, 255, 0.5);
+
+  /* Yazılar */
+  --text-muted: #6c757d;
+  --text-secondary: #6c757d;
+  --text-primary: #0d6efd;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #6c63ff88;
+  --scrollbar-track: transparent;
+
+  /* Randevu seçimi */
+  --appointment-selected-bg: #ffe6e6;
+  --appointment-selected-color: #a80000;
+  --appointment-remove-btn-color: #ff4d4d;
+}
+
+/* BODY */
+body {
+  background: var(--bg-body);
+  font-family: var(--font-family-base);
+}
+
+/* Genel listeler */
+.list-group-item {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  border-bottom: 1px solid var(--list-border-bottom);
+  background: var(--list-bg);
+  color: var(--list-text);
+  font-weight: 500;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  margin-bottom: 0.4rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  position: relative;
+}
+
+.list-group-item:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.list-group-item:hover {
+  background: var(--list-hover-bg);
+  color: var(--list-hover-color);
+  box-shadow: 0 8px 20px var(--list-hover-shadow);
+  transform: translateY(-2px);
+}
+
+.list-group-item.active {
+  background: var(--list-active-bg-gradient);
+  color: var(--list-active-color);
+  box-shadow: 0 12px 28px var(--list-active-shadow);
+  border-radius: 1rem;
+  transform: translateY(-3px);
+}
+
+.list-group-item.active small,
+.list-group-item.active .text-primary,
+.list-group-item.active .text-muted,
+.list-group-item.active .text-secondary {
+  color: #f1f1f1 !important;
+}
+
+.list-group-item p {
+  margin: 0;
+  opacity: 0.75;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.list-group-item:hover p {
+  opacity: 0.95;
+}
+
+.list-group-item.active p {
+  opacity: 1;
+}
+
+/* Badge */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.35em 0.7em;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Kartlar */
+.card {
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 12px 30px var(--card-shadow);
+  background: var(--card-bg);
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 20px 48px var(--card-shadow-hover);
+}
+
+.card-header {
+  font-size: 1.2rem;
+  letter-spacing: 0.3px;
+  background: var(--card-header-bg-gradient);
+  color: var(--card-header-color);
+  font-weight: 700;
+  border: none;
+  padding: 1rem 1.5rem;
+  box-shadow: inset 0 -4px 10px rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Butonlar */
+.btn-primary {
+  background: var(--btn-primary-bg-gradient);
+  border: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border-radius: 0.75rem;
+  padding: 0.6rem 1rem;
+  box-shadow: 0 6px 15px var(--btn-primary-shadow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--btn-primary-bg-hover-gradient);
+  box-shadow: 0 10px 25px var(--btn-primary-shadow-hover);
+}
+
+.btn-primary:disabled {
+  background: var(--btn-primary-disabled-bg);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Textarea */
+textarea.form-control {
+  border-radius: 1rem;
+  border: 1.5px solid var(--textarea-border);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+textarea.form-control:focus {
+  border-color: var(--textarea-border-focus);
+  box-shadow: 0 0 12px var(--textarea-shadow-focus);
+  outline: none;
+}
+
+/* Tarih yazısı */
+small.text-muted {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Detay alanı */
+#detailSubject {
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  min-height: 28px;
+}
+
+#detailBody {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  color: var(--text-secondary);
+}
+
+#detailBody.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Scrollbar */
+#messagesList::-webkit-scrollbar,
+#appointmentsList::-webkit-scrollbar {
+  width: 8px;
+}
+#messagesList::-webkit-scrollbar-thumb,
+#appointmentsList::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+#messagesList::-webkit-scrollbar-track,
+#appointmentsList::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+/* Onaylanan randevulardaki çarpı butonu */
+.appointment-item {
+  position: relative;
+  padding-right: 2.5rem;
+}
+
+.appointment-item .remove-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.3rem;
+  color: var(--appointment-remove-btn-color);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  user-select: none;
+}
+
+.appointment-item.selected .remove-btn {
+  opacity: 1;
+}
+
+.appointment-item.selected {
+  background: var(--appointment-selected-bg);
+  color: var(--appointment-selected-color);
+}
+
+/* Arama ve filtre alanı */
+.filter-container {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-container input[type="search"],
+.filter-container input[type="date"] {
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--textarea-border);
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  color: var(--list-text);
+  background-color: var(--list-bg);
+}
+
+.filter-container input[type="search"]:focus,
+.filter-container input[type="date"]:focus {
+  border-color: var(--textarea-border-focus);
+  box-shadow: 0 0 12px var(--textarea-shadow-focus);
+  outline: none;
+  color: var(--list-text);
+  background-color: var(--list-bg);
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+  .list-group-item {
+    font-size: 0.9rem;
+    padding: 0.8rem 1rem;
+  }
+  .card-header {
+    font-size: 1.1rem;
+    padding: 0.75rem 1rem;
+  }
+  textarea.form-control {
+    font-size: 0.95rem;
+  }
+  .filter-container {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+}
+
+
+
+/* === General Adjustments for Light Mode (optional) === */
+body {
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+/* === DARK MODE OVERRIDES === */
+[data-bs-theme="dark"] body {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+/* Card */
+[data-bs-theme="dark"] .card {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  border-color: #333;
+}
+
+[data-bs-theme="dark"] .card-header {
+  background-color: #2a2a2a;
+  border-bottom-color: #444;
+  color: #fff;
+}
+
+/* Inputs & Filters */
+[data-bs-theme="dark"] .filter-container input,
+[data-bs-theme="dark"] textarea,
+[data-bs-theme="dark"] .form-control {
+  background-color: #2c2c2c;
+  border-color: #555;
+  color: #fff;
+}
+
+[data-bs-theme="dark"] .form-control::placeholder {
+  color: #aaa;
+}
+
+/* List Group Items (Mesajlar ve Randevular) */
+[data-bs-theme="dark"] .list-group-item {
+  background-color: #1e1e1e;
+  color: #ddd;
+  border-color: #444;
+}
+
+[data-bs-theme="dark"] .list-group-item:hover {
+  background-color: #2a2a2a;
+}
+
+/* Aktif mesaj */
+[data-bs-theme="dark"] .message-item.active {
+  background-color: #333 !important;
+  color: #fff;
+}
+
+/* Yeni mesaj etiketi */
+[data-bs-theme="dark"] .badge.bg-danger {
+  background-color: #d9534f;
+  color: #fff;
+}
+
+/* Toast */
+[data-bs-theme="dark"] .toast {
+  background-color: #2d2d2d;
+  color: #fff;
+  border: none;
+}
+
+/* Toast Kapat Butonu */
+[data-bs-theme="dark"] .btn-close-white {
+  filter: brightness(0) invert(1);
+}
+
+/* Butonlar */
+[data-bs-theme="dark"] .btn-primary {
+  background-color: #4e54c8;
+  border-color: #4e54c8;
+  color: #fff;
+}
+
+[data-bs-theme="dark"] .btn-primary:hover {
+  background-color: #6c70e0;
+  border-color: #6c70e0;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary {
+  border-color: #888;
+  color: #ccc;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary:hover {
+  background-color: #444;
+  color: #fff;
+}
+
+/* Randevu Seçili */
+[data-bs-theme="dark"] .appointment-item.selected {
+  background-color: #343a40;
+  color: #fff;
+}
+
+/* Randevu çarpı ikonu */
+[data-bs-theme="dark"] .remove-btn {
+  color: #aaa;
+}
+
+[data-bs-theme="dark"] .remove-btn:hover {
+  color: #f00;
+  cursor: pointer;
+}
+
+/* Metinler */
+[data-bs-theme="dark"] .text-muted {
+  color: #aaa !important;
+}
+
+[data-bs-theme="dark"] .text-secondary {
+  color: #bbb !important;
+}
+
+[data-bs-theme="dark"] .text-primary {
+  color: #84b6f4 !important;
+}
+
+/* Scrollbar */
+[data-bs-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
+  background-color: #444;
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-track {
+  background-color: #1e1e1e;
+}

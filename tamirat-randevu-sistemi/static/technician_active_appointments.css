@@ -1,0 +1,219 @@
+:root {
+  /* Renkler */
+  --color-primary: #2563eb;
+  --color-primary-dark: #1e40af;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+
+  --color-light: #f9fafb;
+  --color-light-alt: #f3f4f6;
+  --color-text-dark: #374151;
+  --color-text-light: #6b7280;
+
+  --color-white: #ffffff;
+
+  /* Boyutlar ve Gölge */
+  --radius-card: 1.5rem;
+  --radius-toast: 1rem;
+  --radius-button: 50px;
+
+  --shadow-light: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 20px 50px rgba(0, 0, 0, 0.15);
+  --shadow-toast: 0 5px 20px rgba(0, 0, 0, 0.1);
+  --shadow-btn-success: 0 0 10px rgba(34, 197, 94, 0.6);
+  --shadow-btn-danger: 0 0 10px rgba(239, 68, 68, 0.6);
+
+  /* Yazılar */
+  --font-size-badge: 0.9rem;
+  --font-size-header: 1.1rem;
+  --font-size-paragraph: 0.95rem;
+
+  --modal-btn-min-width: 120px;
+}
+
+/* Kart */
+.card {
+  border: none;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-light);
+  transition: all 0.35s ease;
+  background-color: var(--color-light);
+  color: var(--color-text-dark);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+}
+
+.card-header {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border: none;
+  color: var(--color-white);
+  font-weight: 600;
+  font-size: var(--font-size-header);
+}
+
+.card-body h5 {
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.card-body ul li {
+  margin-bottom: 0.4rem;
+  color: var(--color-text-dark);
+}
+
+.card-body p {
+  color: var(--color-text-light);
+  font-size: var(--font-size-paragraph);
+}
+
+.card-footer {
+  background: var(--color-light-alt);
+}
+
+/* Badge */
+.badge {
+  font-size: var(--font-size-badge);
+  padding: 0.4em 0.7em;
+}
+
+/* Butonlar */
+.btn {
+  border-radius: var(--radius-button);
+  transition: all 0.3s ease;
+}
+
+.btn-outline-success:hover {
+  background: var(--color-success);
+  color: var(--color-white);
+  box-shadow: var(--shadow-btn-success);
+}
+
+.btn-outline-danger:hover {
+  background: var(--color-danger);
+  color: var(--color-white);
+  box-shadow: var(--shadow-btn-danger);
+}
+
+/* Toast */
+.toast {
+  border-radius: var(--radius-toast);
+  box-shadow: var(--shadow-toast);
+}
+
+/* Modal */
+.modal-header {
+  border-bottom: none;
+}
+
+.modal-content {
+  border-radius: var(--radius-toast);
+}
+
+.modal-footer .btn {
+  min-width: var(--modal-btn-min-width);
+}
+
+.modal-body i {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------------- Dark Mode ---------------- */
+[data-bs-theme="dark"] {
+  --color-light: #1e293b;       /* Kart ve modal arka plan koyu */
+  --color-light-alt: #273549;   /* Kart footer arka plan koyu */
+  --color-text-dark: #e0e6f1;   /* Yazılar açık renk */
+  --color-text-light: #94a3b8;  /* Daha soluk yazılar */
+  --color-white: #f1f5f9;       /* Beyaz ton koyu mod için */
+
+  --shadow-light: 0 5px 15px rgba(0, 0, 0, 0.8);
+  --shadow-hover: 0 10px 40px rgba(0, 0, 0, 0.9);
+  --shadow-toast: 0 5px 15px rgba(0, 0, 0, 0.7);
+}
+
+/* Kartlar */
+[data-bs-theme="dark"] .card {
+  background-color: var(--color-light);
+  color: var(--color-text-dark);
+  box-shadow: var(--shadow-light);
+}
+[data-bs-theme="dark"] .card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+/* Kart başlığı */
+[data-bs-theme="dark"] .card-header {
+  background: linear-gradient(135deg, #3b82f6, #1e40af); /* biraz daha parlak */
+  color: var(--color-white);
+}
+
+/* Kart alt kısmı */
+[data-bs-theme="dark"] .card-footer {
+  background-color: var(--color-light-alt);
+}
+
+/* Kart içindeki liste ve paragraf */
+[data-bs-theme="dark"] .card-body ul li {
+  color: var(--color-text-dark);
+}
+[data-bs-theme="dark"] .card-body p {
+  color: var(--color-text-light);
+}
+
+/* Badge renkleri */
+[data-bs-theme="dark"] .bg-warning {
+  background-color: #facc15 !important;
+  color: #1f2937 !important;
+}
+[data-bs-theme="dark"] .bg-success {
+  background-color: #22c55e !important;
+  color: #f0fdf4 !important;
+}
+[data-bs-theme="dark"] .bg-danger {
+  background-color: #ef4444 !important;
+  color: #fef2f2 !important;
+}
+[data-bs-theme="dark"] .bg-secondary {
+  background-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Buton hover */
+[data-bs-theme="dark"] .btn-outline-success:hover {
+  background-color: #22c55e !important;
+  color: var(--color-white) !important;
+  box-shadow: var(--shadow-btn-success);
+}
+[data-bs-theme="dark"] .btn-outline-danger:hover {
+  background-color: #ef4444 !important;
+  color: var(--color-white) !important;
+  box-shadow: var(--shadow-btn-danger);
+}
+
+/* Toast */
+[data-bs-theme="dark"] .toast {
+  background-color: #273549;
+  color: var(--color-white);
+  box-shadow: var(--shadow-toast);
+}
+
+/* Modal */
+[data-bs-theme="dark"] .modal-content {
+  background-color: var(--color-light);
+  color: var(--color-text-dark);
+}
+
+[data-bs-theme="dark"] .modal-header {
+  border-bottom: none;
+}
+
+[data-bs-theme="dark"] .btn-close {
+  filter: invert(1);
+}
+
+[data-bs-theme="dark"] .modal-footer .btn {
+  color: var(--color-white);
+}

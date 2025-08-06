@@ -1,0 +1,234 @@
+{% extends "base_user.html" %}
+
+{% block title %}Randevu Oluştur{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='randevu_olustur.css') }}">
+<style>
+  /* DARK MODE STYLES */
+  [data-bs-theme="dark"] body {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
+
+  [data-bs-theme="dark"] .container {
+    background: transparent !important;
+    color: #ddd;
+  }
+
+  [data-bs-theme="dark"] h2 {
+    color: #7dafff;
+  }
+
+  [data-bs-theme="dark"] form {
+    background: rgba(32, 32, 32, 0.85) !important;
+    box-shadow: 0 4px 15px rgb(0 0 0 / 0.7) !important;
+  }
+
+  /* Form label renkleri */
+  [data-bs-theme="dark"] .form-label {
+    color: #ddd !important;
+  }
+
+  /* Input ve select arka plan ve yazı rengi */
+  [data-bs-theme="dark"] .form-control,
+  [data-bs-theme="dark"] .form-select,
+  [data-bs-theme="dark"] textarea.form-control {
+    background-color: #2a2a2a;
+    color: #eee;
+    border-color: #555;
+    box-shadow: none;
+  }
+
+  [data-bs-theme="dark"] .form-control::placeholder,
+  [data-bs-theme="dark"] .form-select option {
+    color: #bbb;
+  }
+
+  /* Focus state */
+  [data-bs-theme="dark"] .form-control:focus,
+  [data-bs-theme="dark"] .form-select:focus,
+  [data-bs-theme="dark"] textarea.form-control:focus {
+    background-color: #3b3b3b;
+    border-color: #4e54c8;
+    box-shadow: 0 0 8px rgba(78, 84, 200, 0.7);
+    color: #fff;
+  }
+
+  /* Invalid input in dark mode */
+  [data-bs-theme="dark"] .was-validated .form-control:invalid,
+  [data-bs-theme="dark"] .was-validated .form-select:invalid,
+  [data-bs-theme="dark"] .was-validated textarea.form-control:invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 6px rgba(220, 53, 69, 0.8);
+    background-color: #3a1f1f;
+    color: #fff;
+  }
+
+  /* Invalid feedback */
+  [data-bs-theme="dark"] .invalid-feedback {
+    color: #ff6b6b;
+  }
+
+  /* Toast buton kapatma ikonu */
+  [data-bs-theme="dark"] .toast .btn-close {
+    filter: brightness(0) invert(1);
+  }
+
+  /* Button */
+  [data-bs-theme="dark"] .btn-primary {
+    background-color: #4e54c8;
+    border-color: #4e54c8;
+    color: white;
+    box-shadow: 0 4px 12px rgb(78 84 200 / 0.6);
+  }
+
+  [data-bs-theme="dark"] .btn-primary:hover {
+    background-color: #6f73e5;
+    border-color: #6f73e5;
+  }
+
+  /* Scrollbar for textarea in dark mode */
+  [data-bs-theme="dark"] textarea.form-control::-webkit-scrollbar {
+    width: 8px;
+  }
+  [data-bs-theme="dark"] textarea.form-control::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 4px;
+  }
+
+  /* Responsive form padding */
+  @media (max-width: 576px) {
+    form {
+      padding: 1.5rem 1rem !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5" style="max-width: 650px;">
+
+  <h2 class="mb-4 fw-semibold d-flex align-items-center gap-2" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <i class="bi bi-calendar-plus text-primary fs-4"></i> Randevu Oluştur
+  </h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+        {% for category, message in messages %}
+          <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2 shadow-sm rounded" role="alert" aria-live="assertive" aria-atomic="true" style="backdrop-filter: saturate(180%) blur(8px);">
+            <div class="d-flex">
+              <div class="toast-body">{{ message }}</div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form id="appointmentForm" action="{{ url_for('randevu_olustur') }}" method="POST" novalidate
+        style="background: rgba(255,255,255,0.85); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgb(0 0 0 / 0.1);">
+
+    <!-- Tarih -->
+    <div class="mb-4">
+      <label for="date" class="form-label fw-semibold text-dark">Randevu Tarihi</label>
+      <input type="date" class="form-control form-control-lg rounded-3 shadow-sm" id="date" name="date" required min="{{ current_date }}">
+      <div class="invalid-feedback">Lütfen geçerli bir tarih seçin.</div>
+    </div>
+
+    <!-- Uzmanlık -->
+    <div class="mb-4">
+      <label for="uzmanlik" class="form-label fw-semibold text-dark">Talep Edilen Uzmanlık</label>
+      <select class="form-select form-select-lg rounded-3 shadow-sm" id="uzmanlik" name="uzmanlik" required>
+        <option value="" disabled selected>Seçiniz...</option>
+        <option value="Bilgisayar Teknik Servisi">Bilgisayar Teknik Servisi</option>
+        <option value="Ağ ve Sistem Yönetimi">Ağ ve Sistem Yönetimi</option>
+        <option value="Mobil Cihaz Tamiri">Mobil Cihaz Tamiri</option>
+        <option value="Yazılım Geliştirme & Teknik Destek">Yazılım Geliştirme & Teknik Destek</option>
+      </select>
+      <div class="invalid-feedback">Lütfen uzmanlık alanı seçin.</div>
+    </div>
+
+    <!-- Destek Modeli -->
+    <div class="mb-4">
+      <label for="destek_modeli" class="form-label fw-semibold text-dark">Destek Modeli</label>
+      <select class="form-select form-select-lg rounded-3 shadow-sm" id="destek_modeli" name="destek_modeli" required>
+        <option value="" disabled selected>Seçiniz...</option>
+        <option value="Uzaktan Destek">Uzaktan Destek</option>
+        <option value="Yerinde Servis">Yerinde Servis</option>
+        <option value="Atölye & Teknik Merkez">Atölye & Teknik Merkez</option>
+      </select>
+      <div class="invalid-feedback">Lütfen destek modeli seçin.</div>
+    </div>
+
+    <!-- Kategori -->
+    <div class="mb-4">
+      <label for="category" class="form-label fw-semibold text-dark">Randevu Kategorisi</label>
+      <select class="form-select form-select-lg rounded-3 shadow-sm" id="category" name="category" required>
+        <option value="" disabled selected>Seçiniz...</option>
+        <option value="tamirat">Tamirat</option>
+        <option value="tadilat">Tadilat</option>
+        <option value="bakim">Bakım</option>
+        <option value="yazilim">Yazılım</option>
+      </select>
+      <div class="invalid-feedback">Lütfen kategori seçin.</div>
+    </div>
+
+    <!-- Açıklama -->
+    <div class="mb-4">
+      <label for="description" class="form-label fw-semibold text-dark">Randevu Açıklaması</label>
+      <textarea class="form-control form-control-lg rounded-3 shadow-sm" id="description" name="description" rows="4" maxlength="500" placeholder="Detayları giriniz..." required></textarea>
+      <div class="form-text text-end text-muted"><span id="charCount">0</span>/500 karakter</div>
+      <div class="invalid-feedback">Lütfen açıklama girin.</div>
+    </div>
+
+    <button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-100 d-flex justify-content-center align-items-center gap-2 shadow-sm" style="letter-spacing: 0.04em;">
+      <i class="bi bi-calendar-plus fs-5"></i>
+      <span id="btnText">Randevu Oluştur</span>
+      <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+    </button>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (() => {
+    const form = document.getElementById('appointmentForm');
+    const description = document.getElementById('description');
+    const charCount = document.getElementById('charCount');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+
+    // Karakter sayacı
+    description.addEventListener('input', () => {
+      charCount.textContent = description.value.length;
+    });
+
+    // Form validasyon ve spinner
+    form.addEventListener('submit', (e) => {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+        form.classList.add('was-validated');
+        return;
+      }
+      btnText.textContent = 'Gönderiliyor...';
+      btnSpinner.classList.remove('d-none');
+      submitBtn.disabled = true;
+    });
+
+    // Minimum tarih bugünden başlasın
+    const dateInput = document.getElementById('date');
+    const today = new Date().toISOString().split('T')[0];
+    if (!dateInput.min) {
+      dateInput.min = today;
+    }
+  })();
+</script>
+{% endblock %}
