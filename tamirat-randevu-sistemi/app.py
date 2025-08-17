@@ -9,12 +9,15 @@ import re
 from flask import session, redirect, url_for
 import logging
 from flask import jsonify
+from sqlalchemy import func
+from flask_socketio import SocketIO, emit, join_room,leave_room
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'gelistirme_anahtari'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///teknoloji.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 
 
@@ -441,29 +444,41 @@ def register_technician():
 @app.route('/user/dashboard')
 @login_required
 def user_dashboard():
-    # Sadece User tipi için izin ver
+    # Sadece kullanıcı rolündeki üyeler erişebilir
     if not current_user.get_id().startswith("user-"):
         flash('Bu sayfaya erişim yetkiniz yok!', 'danger')
         return redirect(url_for('index'))
 
-    # Kullanıcının toplam randevu sayısını al
+    # Toplam randevular
     total_appointments = Appointment.query.filter_by(user_id=current_user.id).count()
 
-    # Kullanıcının tamamlanan randevu sayısı
-    completed_appointments = Appointment.query.filter_by(user_id=current_user.id, status='tamamlandi').count()
+    # Tamamlanan randevular (case-insensitive kontrol)
+    completed_appointments = Appointment.query.filter(
+        Appointment.user_id == current_user.id,
+        func.lower(Appointment.status) == 'tamamlandı'  # veritabanındaki durum neyse onu yazabilirsiniz
+    ).count()
 
-    # Kullanıcının okunmamış mesaj sayısı
+    # Okunmamış mesaj sayısı
     messages_count = Message.query.filter_by(user_id=current_user.id, is_read=False).count()
 
-    # Kullanıcıya ait aktif duyuruları getir (varsa)
-    announcements = Announcement.query.filter_by(target_group='uye').order_by(Announcement.date_created.desc()).all()
+    # Üyeler için duyurular
+    announcements = Announcement.query.filter_by(target_group='uye') \
+                    .order_by(Announcement.date_created.desc()).all()
+
+    # Son 5 randevu
+    recent_appointments = Appointment.query.filter_by(user_id=current_user.id) \
+                            .order_by(Appointment.date.desc()) \
+                            .limit(5).all()
 
     return render_template('user_dashboard.html',
                            user=current_user,
                            total_appointments=total_appointments,
                            completed_appointments=completed_appointments,
                            messages_count=messages_count,
-                           announcements=announcements)
+                           announcements=announcements,
+                           recent_appointments=recent_appointments)
+
+
 
 
 @app.route('/randevu/olustur', methods=['GET', 'POST'])
@@ -519,87 +534,246 @@ def randevu_olustur():
 @login_required
 def change_password():
     if request.method == 'POST':
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_password')
+        current_password = request.form.get('current_password', '').strip()
+        new_password = request.form.get('new_password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
 
-        # Mevcut şifre doğru mu kontrol et
+        # 1) Mevcut şifre kontrolü
         if not check_password_hash(current_user.sifre, current_password):
             flash('Mevcut şifre yanlış.', 'danger')
             return redirect(url_for('change_password'))
 
-        # Yeni şifre doğrulaması
+        # 2) Yeni şifreler aynı mı?
         if new_password != confirm_password:
             flash('Yeni şifre ile onayı uyuşmuyor.', 'warning')
             return redirect(url_for('change_password'))
 
+        # 3) Yeni şifre minimum uzunluk kontrolü
         if len(new_password) < 6:
             flash('Şifre en az 6 karakter olmalıdır.', 'warning')
             return redirect(url_for('change_password'))
 
-        # Şifreyi hashleyip kaydet
+        # 4) Aynı şifre tekrar kullanılmasın
+        if check_password_hash(current_user.sifre, new_password):
+            flash('Yeni şifre mevcut şifre ile aynı olamaz.', 'warning')
+            return redirect(url_for('change_password'))
+
+        # 5) Şifreyi güncelle
         current_user.sifre = generate_password_hash(new_password)
         db.session.commit()
 
         flash('Şifreniz başarıyla güncellendi.', 'success')
         return redirect(url_for('user_dashboard'))
 
+    # GET isteğinde formu göster
     return render_template('change_password.html')
 
 
 
+
+
+
 def get_current_user_real_id():
+    """Kullanıcının gerçek ID'sini alır"""
     return int(current_user.get_id().split('-')[1])
 
 
-@app.route('/user/messages', methods=['GET', 'POST'])
+# Kullanıcı mesaj listesi sayfası
+@app.route('/user/messages', methods=['GET'])
 @login_required
 def user_messages():
     if not current_user.get_id().startswith("user-"):
         flash('Bu sayfaya erişim yetkiniz yok!', 'danger')
         return redirect(url_for('index'))
 
-    user_real_id = get_current_user_real_id()
+    user_id = get_current_user_real_id()
+    appointments = Appointment.query.filter_by(user_id=user_id, status="Onaylandı").all()
+    technicians = [appt.technician for appt in appointments if appt.technician is not None]
 
-    if request.method == 'POST':
-        appointment_id = request.form.get('appointment_id')
-        message_body = request.form.get('message_body')
+    return render_template('user_messages.html', technicians=technicians)
 
-        if not appointment_id or not message_body:
-            flash('Lütfen tüm alanları doldurun.', 'warning')
-            return redirect(url_for('user_messages'))
 
-        appointment = Appointment.query.get(appointment_id)
+# Belirli tekniker ile mesajları al
+@app.route('/user/messages/<int:tech_id>/get_messages', methods=['GET'])
+@login_required
+def user_get_messages(tech_id):
+    user_id = get_current_user_real_id()
+    messages = Message.query.filter_by(
+        user_id=user_id, technician_id=tech_id
+    ).order_by(Message.created_at.asc()).all()
 
-        if not appointment or appointment.user_id != user_real_id or appointment.status != "Onaylandı":
-            flash('Geçersiz randevu seçimi.', 'danger')
-            return redirect(url_for('user_messages'))
+    return jsonify({
+        'success': True,
+        'messages': [
+            {
+                'body': m.body,
+                'from_user': m.sender_type == 'user',
+                'timestamp': m.created_at.strftime("%Y-%m-%d %H:%M")
+            } for m in messages
+        ]
+    })
 
-        # Mesaj oluştur
+
+# Kullanıcı mesaj gönderimi (HTTP + Socket.IO)
+@app.route('/user/messages/<int:tech_id>/send', methods=['POST'])
+@login_required
+def user_send_message(tech_id):
+    user_id = get_current_user_real_id()
+    body = request.form.get('message_body')
+    if not body:
+        return jsonify({'success': False, 'message': 'Mesaj boş olamaz'})
+
+    message = Message(
+        user_id=user_id,
+        technician_id=tech_id,
+        body=body,
+        sender_type='user',
+        subject='Randevu mesajı',
+        created_at=datetime.utcnow()
+    )
+    db.session.add(message)
+    db.session.commit()
+
+    # Socket.IO ile canlı gönderim (oda kullan)
+    room = f"user_{user_id}_tech_{tech_id}"
+    socketio.emit('receive_message', {
+        'tech_id': tech_id,
+        'body': body,
+        'from_user': True,
+        'timestamp': message.created_at.strftime("%Y-%m-%d %H:%M")
+    }, room=room)
+
+    return jsonify({'success': True, 'message': 'Mesaj gönderildi'})
+
+
+# Socket.IO: Odaya katıl
+@socketio.on('join_room')
+def handle_join(data):
+    tech_id = data.get('tech_id')
+    if not tech_id:
+        return
+
+    user_id = get_current_user_real_id()
+    room = f"user_{user_id}_tech_{tech_id}"
+    join_room(room)
+    emit('joined_room', {"room": room})
+
+
+# Socket.IO: Odadan çık
+@socketio.on('leave_room')
+def handle_leave(data):
+    tech_id = data.get('tech_id')
+    if not tech_id:
+        return
+
+    user_id = get_current_user_real_id()
+    room = f"user_{user_id}_tech_{tech_id}"
+    leave_room(room)
+    emit('left_room', {"room": room})
+
+
+# Socket.IO: Kullanıcı canlı mesaj gönderimi
+@socketio.on('send_message')
+def handle_send_socket_message(data):
+    """
+    data = {
+        "tech_id": int,
+        "body": str
+    }
+    """
+    user_id = get_current_user_real_id()
+    tech_id = data.get('tech_id')
+    body = data.get('body')
+    if not tech_id or not body:
+        return
+
+    try:
         new_msg = Message(
-            user_id=user_real_id,
-            technician_id=appointment.technician_id,
-            sender_type='user',  # Burada gönderici 'user'
-            subject=f"Randevu #{appointment.id} için mesaj",
-            body=message_body,
+            user_id=user_id,
+            technician_id=tech_id,
+            sender_type='user',
+            subject=f"Mesaj - {datetime.now().strftime('%d.%m.%Y %H:%M')}",
+            body=body,
             is_read=False,
             created_at=datetime.utcnow()
         )
-
         db.session.add(new_msg)
         db.session.commit()
 
-        flash('Mesaj başarıyla gönderildi.', 'success')
-        return redirect(url_for('user_messages'))
+        room = f"user_{user_id}_tech_{tech_id}"
+        emit('receive_message', {
+            'id': new_msg.id,
+            'body': body,
+            'timestamp': new_msg.created_at.strftime('%d.%m.%Y %H:%M'),
+            'from_user': True
+        }, room=room)
 
-    # Kullanıcının mesajlarını getir (hem teknikerden hem kendisinden olanlar)
-    messages = Message.query.filter_by(user_id=user_real_id).order_by(Message.created_at.desc()).all()
+    except Exception as e:
+        db.session.rollback()
+        print(f"SocketIO kullanıcı mesaj hatası: {e}")
 
-    # Onaylı randevuları getir
-    appointments = Appointment.query.filter_by(user_id=user_real_id, status="Onaylandı").order_by(Appointment.date.desc()).all()
 
-    return render_template('user_messages.html', messages=messages, appointments=appointments)
 
+
+
+# Canlı mesaj gönderme (hem tekniker hem kullanıcı)
+@socketio.on('send_message')
+def handle_send_message(data):
+    """
+    data = {
+        "user_id": int,
+        "technician_id": int,
+        "body": str,
+        "sender_type": "technician" / "user"
+    }
+    """
+    user_id = data.get('user_id')
+    technician_id = data.get('technician_id')
+    body = data.get('body')
+    sender_type = data.get('sender_type')
+
+    if not user_id or not technician_id or not body or not sender_type:
+        return
+
+    # Mesaj DB'ye kaydedilir
+    try:
+        new_msg = Message(
+            user_id=user_id,
+            technician_id=technician_id,
+            sender_type=sender_type,
+            subject=f"Mesaj - {datetime.now().strftime('%d.%m.%Y %H:%M')}",
+            body=body,
+            is_read=False,
+            created_at=datetime.now()
+        )
+        db.session.add(new_msg)
+        db.session.commit()
+
+        # Ortak oda ismi
+        room = f"tech_{technician_id}_user_{user_id}"
+        emit('receive_message', {
+            "id": new_msg.id,
+            "body": body,
+            "timestamp": new_msg.created_at.strftime('%d.%m.%Y %H:%M'),
+            "from_technician": sender_type == 'technician'
+        }, room=room)
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"SocketIO mesaj hatası: {e}")
+
+
+# Odaya katıl
+@socketio.on('join_room')
+def handle_join_room(data):
+    """
+    data = {"user_id": int, "technician_id": int}
+    """
+    user_id = data.get('user_id')
+    technician_id = data.get('technician_id')
+    if user_id and technician_id:
+        room = f"tech_{technician_id}_user_{user_id}"
+        join_room(room)
 
 
 
@@ -695,13 +869,12 @@ def technician_active_appointments():
 
 
 def get_current_user_real_id():
-    # Burada teknikerin gerçek ID'sini döndüren fonksiyon.
-    # Örnek:
-    # current_user.get_id() => "tech-123"
-    # return 123
+    # Tekniker ID'sini döndür
     return int(current_user.get_id().split('-')[1])
 
-
+# ------------------------
+# Rotalar
+# ------------------------
 @app.route('/technician/messages')
 @login_required
 def technician_messages():
@@ -710,23 +883,15 @@ def technician_messages():
         return redirect(url_for('index'))
 
     technician_id = get_current_user_real_id()
-
-    # Bu teknikerin onayladığı randevuları al
     approved_appointments = Appointment.query.filter_by(
         technician_id=technician_id,
         status="Onaylandı"
     ).all()
 
-    # Bu randevulardaki kullanıcıların id'lerini al
     user_ids = {appt.user_id for appt in approved_appointments}
 
-    if not user_ids:
-        users = []
-    else:
-        users = User.query.filter(User.id.in_(user_ids)).all()
-
-    return render_template('technician_messages.html', users=users)
-
+    users = User.query.filter(User.id.in_(user_ids)).all() if user_ids else []
+    return render_template('technician_messages.html', users=users, TECHNICIAN_ID=technician_id)
 
 @app.route('/technician/messages/<int:user_id>/get_messages')
 @login_required
@@ -736,23 +901,20 @@ def get_messages(user_id):
 
     technician_id = get_current_user_real_id()
 
-    # Tek tekniker ve seçili kullanıcı arasındaki tüm mesajları al (hem tekniker hem kullanıcı gönderebilir)
     messages = Message.query.filter(
         (Message.technician_id == technician_id) &
         (Message.user_id == user_id)
     ).order_by(Message.created_at.asc()).all()
 
-    messages_data = []
-    for msg in messages:
-        messages_data.append({
+    messages_data = [
+        {
             "id": msg.id,
             "body": msg.body,
             "timestamp": msg.created_at.strftime('%d.%m.%Y %H:%M'),
-            "from_technician": (msg.sender_type == 'technician'),  # sender_type ile göndericiyi ayır
-        })
-
+            "from_technician": (msg.sender_type == 'technician'),
+        } for msg in messages
+    ]
     return jsonify(success=True, messages=messages_data)
-
 
 @app.route('/technician/send_message', methods=['POST'])
 @login_required
@@ -765,7 +927,6 @@ def technician_send_message():
 
     user_id = request.form.get('user_id')
     message_body = request.form.get('message_body')
-
     if not user_id or not message_body:
         msg = 'Lütfen tüm alanları doldurun.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -775,11 +936,10 @@ def technician_send_message():
 
     try:
         subject = f"Tekniker Mesajı - {datetime.now().strftime('%d.%m.%Y %H:%M')}"
-
         new_message = Message(
             user_id=int(user_id),
             technician_id=get_current_user_real_id(),
-            sender_type='technician',  # Burada sender_type kesin tekniker
+            sender_type='technician',
             subject=subject,
             body=message_body,
             is_read=False,
@@ -787,6 +947,15 @@ def technician_send_message():
         )
         db.session.add(new_message)
         db.session.commit()
+
+        # Socket.IO ile kullanıcıya anında mesaj gönder
+        socketio.emit('receive_message', {
+            'user_id': int(user_id),
+            'technician_id': get_current_user_real_id(),
+            'body': message_body,
+            'from_technician': True,
+            'timestamp': new_message.created_at.strftime('%d.%m.%Y %H:%M')
+        }, room=f'user_{user_id}')
 
     except Exception as e:
         db.session.rollback()
@@ -802,6 +971,56 @@ def technician_send_message():
     flash('Mesaj başarıyla gönderildi.', 'success')
     return redirect(url_for('technician_messages'))
 
+# ------------------------
+# Socket.IO Eventleri
+# ------------------------
+@socketio.on('join_room')
+def handle_join(data):
+    user_id = data.get('user_id')
+    if user_id:
+        join_room(f'user_{user_id}')
+        emit('joined_room', {'user_id': user_id})
+
+@socketio.on('leave_room')
+def handle_leave(data):
+    user_id = data.get('user_id')
+    if user_id:
+        leave_room(f'user_{user_id}')
+        emit('left_room', {'user_id': user_id})
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    user_id = data.get('user_id')
+    technician_id = data.get('technician_id')
+    body = data.get('body')
+    sender_type = data.get('sender_type')
+
+    # Mesaj veritabanına kaydedilebilir
+    try:
+        msg = Message(
+            user_id=user_id,
+            technician_id=technician_id,
+            sender_type=sender_type,
+            body=body,
+            subject=f"{sender_type.capitalize()} Mesajı - {datetime.now().strftime('%d.%m.%Y %H:%M')}",
+            is_read=False,
+            created_at=datetime.now()
+        )
+        db.session.add(msg)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Socket message save error: {e}")
+        return
+
+    # Hem tekniker hem kullanıcı odasına mesajı gönder
+    socketio.emit('receive_message', {
+        'user_id': user_id,
+        'technician_id': technician_id,
+        'body': body,
+        'from_technician': (sender_type == 'technician'),
+        'timestamp': msg.created_at.strftime('%d.%m.%Y %H:%M')
+    }, room=f'user_{user_id}')
 
 
 
@@ -818,6 +1037,7 @@ def user_appointments():
 
     return render_template('user_appointments.html', appointments=appointments)
 
+
 @app.route('/user/appointment/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_user_appointment(id):
@@ -828,21 +1048,36 @@ def edit_user_appointment(id):
     user_id = get_current_user_real_id()
     appointment = Appointment.query.get_or_404(id)
 
+    # Randevunun kullanıcıya ait olup olmadığını kontrol et
     if appointment.user_id != user_id:
         flash('Bu randevu size ait değil!', 'danger')
         return redirect(url_for('user_appointments'))
 
-    if request.method == 'POST':
-        appointment.date = datetime.strptime(request.form['date'], '%Y-%m-%dT%H:%M')
-        appointment.uzmanlik = request.form['uzmanlik']
-        appointment.category = request.form['category']
-        appointment.description = request.form['description']
+    # Onaylanmış randevuyu düzenlemeye çalışıyorsa engelle
+    if appointment.status == 'Onaylandı':
+        flash('Onaylanmış randevular düzenlenemez!', 'warning')
+        return redirect(url_for('user_appointments'))
 
-        db.session.commit()
-        flash('Randevu başarıyla güncellendi.', 'success')
+    if request.method == 'POST':
+        try:
+            # Tarih ve saat
+            appointment.date = datetime.strptime(request.form['date'], '%Y-%m-%dT%H:%M')
+
+            # Diğer alanlar
+            appointment.uzmanlik = request.form['uzmanlik']
+            appointment.category = request.form['category']
+            appointment.description = request.form['description']
+
+            db.session.commit()
+            flash('Randevu başarıyla güncellendi.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Randevu güncellenirken hata oluştu: {str(e)}', 'danger')
+
         return redirect(url_for('user_appointments'))
 
     return render_template('edit_user_appointment.html', appointment=appointment)
+
 
 
 @app.route('/technician/appointment_history')
@@ -1211,26 +1446,41 @@ def edit_user_admin(user_id):
     user = User.query.get_or_404(user_id)
 
     if request.method == 'POST':
-        user.ad = request.form['ad']
-        user.soyad = request.form['soyad']
-        user.email = request.form['email']
-        user.telefon = request.form.get('telefon', '')
-        user.tc = request.form.get('tc', '')
-        user.adres = request.form.get('adres', '')
-        dogum_tarihi_str = request.form.get('dogum_tarihi', '')
-        if dogum_tarihi_str:
-            try:
-                user.dogum_tarihi = datetime.strptime(dogum_tarihi_str, '%Y-%m-%d').date()
-            except ValueError:
-                flash('Geçersiz doğum tarihi formatı.', 'warning')
-                return render_template('edit_user.html', user=user)
-        else:
-            user.dogum_tarihi = None
-        user.cinsiyet = request.form.get('cinsiyet', '')
+        try:
+            # Temel bilgiler
+            user.ad = request.form.get('ad', '').strip()
+            user.soyad = request.form.get('soyad', '').strip()
+            user.email = request.form.get('email', '').strip()
+            user.telefon = request.form.get('telefon', '').strip()
+            user.tc = request.form.get('tc', '').strip()
+            user.adres = request.form.get('adres', '').strip()
+            
+            # Dogum tarihi string → date
+            dogum_tarihi_str = request.form.get('dogum_tarihi', '').strip()
+            if dogum_tarihi_str:
+                try:
+                    user.dogum_tarihi = datetime.strptime(dogum_tarihi_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash('Geçersiz doğum tarihi formatı.', 'warning')
+                    return render_template('edit_user.html', user=user)
+            else:
+                user.dogum_tarihi = None
 
-        db.session.commit()
-        flash('Kullanıcı bilgileri güncellendi.', 'success')
-        return redirect(url_for('manage_users'))
+            # Cinsiyet
+            user.cinsiyet = request.form.get('cinsiyet', '').strip()
+
+            # Konum
+            konum = request.form.get('konum', '').strip()
+            user.konum = konum if konum else None
+
+            db.session.commit()
+            flash('Kullanıcı bilgileri başarıyla güncellendi.', 'success')
+            return redirect(url_for('manage_users'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Güncelleme sırasında hata oluştu: {str(e)}', 'danger')
+            return render_template('edit_user.html', user=user)
 
     return render_template('edit_user.html', user=user)
 
@@ -1314,6 +1564,8 @@ def announcement_delete(id):
 
 
 
+
+
 @app.route('/admin/technician/edit/<int:id>', methods=['GET', 'POST'])
 def edit_technician(id):
     if 'admin_id' not in session:
@@ -1323,21 +1575,43 @@ def edit_technician(id):
     technician = Technician.query.get_or_404(id)
 
     if request.method == 'POST':
-        technician.ad = request.form['ad']
-        technician.soyad = request.form['soyad']
-        technician.email = request.form['email']
-        technician.telefon = request.form.get('telefon')
-        technician.uzmanlik = request.form['uzmanlik']
-        technician.adres = request.form.get('adres')
-        technician.aciklama = request.form.get('aciklama')
+        try:
+            # Temel bilgiler
+            technician.ad = request.form.get('ad')
+            technician.soyad = request.form.get('soyad')
+            technician.email = request.form.get('email')
+            technician.telefon = request.form.get('telefon')
+            technician.tc = request.form.get('tc')
 
-        # Checkboxlar gönderilmezse form'da olmuyor, o yüzden kontrol et
-        technician.onay = 'onay' in request.form
-        technician.iptal = 'iptal' in request.form
+            # Dogum tarihi string → date
+            dogum_str = request.form.get('dogum_tarihi')
+            if dogum_str:
+                technician.dogum_tarihi = datetime.strptime(dogum_str, '%Y-%m-%d').date()
 
-        db.session.commit()
-        flash('Tekniker bilgileri güncellendi.', 'success')
-        return redirect(url_for('manage_technicians'))  # Veya istediğin başka sayfa
+            # Teknik detaylar
+            technician.uzmanlik = request.form.get('uzmanlik')
+            technician.destek_modeli = request.form.get('destek_modeli')
+            technician.tecrube = int(request.form.get('tecrube') or 0)
+            technician.konum = request.form.get('konum')
+            technician.referans = request.form.get('referans')
+            technician.ek_yetenekler = request.form.get('ek_yetenekler')
+
+            # Şifre güncelleme
+            sifre = request.form.get('sifre')
+            if sifre:
+                technician.sifre = generate_password_hash(sifre)
+
+            # Checkboxlar
+            technician.onay = 'onay' in request.form
+            technician.iptal = 'iptal' in request.form
+
+            db.session.commit()
+            flash('Tekniker bilgileri başarıyla güncellendi.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Güncelleme sırasında hata oluştu: {str(e)}', 'danger')
+
+        return redirect(url_for('manage_technicians'))
 
     return render_template('edit_technician.html', technician=technician)
 
@@ -1355,10 +1629,15 @@ def delete_technician(id):
     flash(f'{technician.ad} {technician.soyad} isimli tekniker silindi.', 'success')
     return redirect(url_for('manage_technicians'))
 
-import os
-if __name__ == "__main__":
-   app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
+
+#import os
+#if __name__ == "__main__":
+#   app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
 
 

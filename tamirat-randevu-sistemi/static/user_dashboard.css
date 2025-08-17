@@ -1,0 +1,276 @@
+:root {
+  /* Renkler */
+  --primary-color: #0d6efd;
+  --primary-hover: #084298;
+  --text-color: #444;
+  --text-muted: #6c757d;
+  --background-light: #fff;
+  --background-light-hover: #f8f9fa;
+  --box-shadow-light: rgba(0, 0, 0, 0.07);
+  --box-shadow-hover: rgba(0, 0, 0, 0.12);
+
+  /* Dark mode renkler */
+  --dark-bg: #1e1e1e;
+  --dark-bg-card: #222;
+  --dark-bg-card-hover: #333;
+  --dark-text: #ccc;
+  --dark-text-muted: #bbb;
+  --dark-primary: #7dafff;
+  --dark-box-shadow: rgba(0, 0, 0, 0.6);
+}
+
+/* Kart hover efektleri */
+.hover-shadow {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  cursor: pointer;
+  z-index: 0;
+}
+.hover-shadow:hover {
+  box-shadow: 0 0.8rem 1.5rem rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  z-index: 5;
+}
+
+/* Kart ikonları */
+.stat-card i {
+  transition: color 0.3s ease;
+  font-size: 2rem;
+}
+/* ====== Duyuru İçerik Satır Sınırlaması ve Hover ====== */
+.announcement-content {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color 0.3s ease, text-decoration 0.3s ease;
+  line-height: 1.5;
+  max-height: calc(1.5em * 4);
+  margin: 0 0 0.5rem 0;
+  word-break: break-word;
+}
+
+.announcement-content:hover,
+.announcement-content:focus {
+  color: var(--primary-color);
+  text-decoration: underline;
+  outline: none;
+}
+
+/* ====== Duyuru Kart Temel Stil ve Hover ====== */
+.announcement-card {
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  background-color: var(--background-light);
+  box-shadow: 0 0.2rem 0.5rem var(--box-shadow-light);
+  color: var(--text-color);
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.announcement-card:hover,
+.announcement-card:focus {
+  background-color: var(--background-light-hover);
+  box-shadow: 0 0.5rem 1rem var(--box-shadow-hover);
+  transform: translateY(-4px);
+  outline: none;
+}
+
+/* Başlık ve içeriğin mobil uyumu */
+.announcement-card h5 {
+  font-size: 1.3rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  margin: 0 0 0.3rem 0;
+  word-break: break-word;
+}
+
+/* Başlık Stili */
+h3.border-start {
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--primary-color);
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+}
+
+/* Masaüstü ve tablet (768px ve üstü) için satır sınırı */
+@media (min-width: 768px) {
+  .announcement-content {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: calc(1.5em * 4);
+  }
+}
+
+/* Mobil (767.98px ve altı) için tam içerik gösterimi */
+@media (max-width: 767.98px) {
+  .announcement-content {
+    display: block;
+    -webkit-line-clamp: unset;
+    -webkit-box-orient: unset;
+    overflow: visible;
+    text-overflow: unset;
+    max-height: none;
+    line-height: 1.6;
+    padding-bottom: 0.5rem;
+  }
+
+  .announcement-card {
+    padding: 1rem 1rem;
+  }
+}
+
+/* ====== Erişilebilirlik için focus stili ====== */
+.announcement-card:focus-visible,
+.announcement-content:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* ====== Toast Buton Daha Belirgin ====== */
+.toast .btn-close {
+  filter: brightness(0) invert(1);
+  transition: filter 0.3s ease;
+}
+
+.toast .btn-close:hover,
+.toast .btn-close:focus {
+  filter: brightness(0) invert(0.7);
+  outline: none;
+}
+
+/* ======= DARK MODE STYLES ======= */
+[data-bs-theme="dark"] .container {
+  color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .text-primary {
+  color: var(--dark-primary) !important;
+}
+
+[data-bs-theme="dark"] .text-muted {
+  color: var(--dark-text-muted) !important;
+}
+
+[data-bs-theme="dark"] .card {
+  background-color: var(--dark-bg) !important;
+  border-color: #444 !important;
+  color: var(--dark-text);
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+[data-bs-theme="dark"] .card .text-secondary {
+  color: var(--dark-text-muted) !important;
+}
+
+[data-bs-theme="dark"] .announcement-card {
+  background-color: var(--dark-bg-card) !important;
+  color: var(--dark-text);
+  box-shadow: 0 0.2rem 0.5rem rgba(0,0,0,0.7);
+}
+
+[data-bs-theme="dark"] .announcement-card:hover {
+  background-color: var(--dark-bg-card-hover) !important;
+  box-shadow: 0 0.5rem 1rem var(--dark-box-shadow);
+}
+
+[data-bs-theme="dark"] .announcement-content {
+  color: var(--dark-text-muted);
+}
+
+[data-bs-theme="dark"] .announcement-content:hover {
+  color: var(--dark-primary);
+  text-decoration: underline;
+}
+
+[data-bs-theme="dark"] h3.border-start {
+  border-color: var(--dark-primary);
+  color: var(--dark-primary);
+}
+
+/* Responsive modal içeriği scroll */
+.modal-body {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+/* ====== Hover efektleri (sadece destekleyen cihazlarda) ====== */
+@media (hover: hover) and (pointer: fine) {
+  .announcement-card {
+    transition: box-shadow 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+    cursor: pointer;
+    background-color: var(--background-light);
+    color: var(--text-color);
+    border-radius: 1rem;
+  }
+
+  .announcement-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-6px);
+    background-color: var(--background-light-hover);
+  }
+}
+
+/* ====== Modal genişlik ve responsive ayarları ====== */
+.modal-dialog {
+  max-width: 600px;
+  margin: 1.75rem auto;
+  border-radius: 1rem;
+}
+
+@media (max-width: 576px) {
+  .modal-dialog {
+    max-width: calc(100% - 2rem); /* Kenarlardan 1rem boşluk */
+    margin: 1rem auto;
+    height: auto;
+  }
+
+  .modal-content {
+    border-radius: 1rem;
+    height: auto;
+  }
+
+  .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* ====== Dark Mode Modal İçerik ====== */
+[data-bs-theme="dark"] .modal-content {
+  background-color: var(--dark-bg) !important;
+  color: var(--dark-text);
+  border-radius: 1rem;
+}
+
+/* Modal başlık */
+.modal-header .modal-title {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* Modal buton */
+.modal-footer .btn-primary {
+  background-color: var(--primary-color);
+  border: none;
+  transition: background-color 0.3s ease;
+}
+
+.modal-footer .btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Toast buton belirginliği */
+.toast .btn-close {
+  filter: brightness(0) invert(1);
+}

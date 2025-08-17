@@ -3,51 +3,104 @@
 {% block title %}Tekniker Yönetimi - Admin Paneli{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
 <style>
-  .table-container {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 0.3rem 0.8rem rgb(0 0 0 / 0.07);
+  .container {
+    max-width: 1150px;
   }
-  tbody tr:hover {
-    background-color: #e9f0f7;
-    cursor: pointer;
+
+  h2 {
+    color: #0d6efd;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
-  .badge-approval-true {
-    background-color: #d1e7dd !important;
-    color: #0f5132 !important;
-    font-weight: 600;
-    box-shadow: 0 0 6px rgba(13, 110, 53, 0.3);
+
+  .table-responsive {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    padding: 1rem;
+    overflow-x: auto;
   }
-  .badge-approval-false {
-    background-color: #fff3cd !important;
-    color: #664d03 !important;
-    font-weight: 600;
-    box-shadow: 0 0 6px rgba(255, 193, 7, 0.3);
+
+  table.dataTable thead {
+    background-color: #0d6efd;
+    color: #fff;
+    font-size: 0.9rem;
   }
-  .badge-cancel-true {
-    background-color: #f8d7da !important;
-    color: #842029 !important;
-    font-weight: 600;
-    box-shadow: 0 0 6px rgba(220, 53, 69, 0.3);
+
+  table.dataTable thead th {
+    border-bottom: none !important;
+    padding: 12px 10px;
   }
-  .badge-cancel-false {
-    background-color: #e2e3e5 !important;
-    color: #41464b !important;
-    font-weight: 600;
-    box-shadow: 0 0 6px rgba(108, 117, 125, 0.3);
+
+  table.dataTable tbody tr:hover {
+    background-color: #f0f8ff !important;
+    transition: background-color 0.25s ease;
+  }
+
+  td a {
+    text-decoration: none;
+    color: #0d6efd;
+  }
+
+  td a:hover {
+    text-decoration: underline;
+  }
+
+  .btn i {
+    vertical-align: middle;
+    font-size: 1.1rem;
+  }
+
+  .btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: #fff !important;
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 10px rgba(220, 53, 69, 0.4);
+  }
+
+  .btn-outline-warning:hover {
+    background-color: #ffc107;
+    color: #212529 !important;
+    border-color: #ffc107 !important;
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.4);
+  }
+
+  .toast-body {
+    font-size: 0.95rem;
+  }
+
+  .toast .btn-close {
+    font-size: 0.8rem;
+  }
+
+  .modal-content {
+    border-radius: 1rem;
+  }
+
+  .modal-header.bg-danger {
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    table.dataTable thead {
+      font-size: 0.8rem;
+    }
+    td, th {
+      font-size: 0.85rem;
+    }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055;">
       {% for category, message in messages %}
-        <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2">
+        <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
           <div class="d-flex">
             <div class="toast-body">{{ message }}</div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
@@ -58,21 +111,22 @@
   {% endif %}
 {% endwith %}
 
-<div class="container mt-5">
-  <h2 class="mb-4 text-center fw-bold">Tekniker Yönetimi</h2>
-  <p style="color: #8a8a8a;">*İsme tıklayınca modal açılıyor</p>
+<div class="container mt-5 px-3 px-md-0">
+  <h2 class="mb-4 text-center fw-bold"><i class="bi bi-person-badge-fill me-2"></i>Teknikerleri Yönet</h2>
 
-  <div class="table-container table-responsive">
-    <table class="table table-bordered table-striped align-middle text-center mb-0">
-      <thead class="table-primary text-primary-emphasis">
+  {% if technicians %}
+  <div class="table-responsive">
+    <table id="techniciansTable" class="table table-striped table-hover align-middle mb-0">
+      <thead>
         <tr>
-          <th>ID</th>
+          <th>#</th>
           <th>Ad Soyad</th>
           <th>Email</th>
           <th>Uzmanlık</th>
-          <th>Onay Durumu</th>
-          <th>İptal Durumu</th>
-          <th>İşlem</th>
+          <th>Konum</th>
+          <th class="text-center">Onay</th>
+          <th class="text-center">İptal</th>
+          <th class="text-center">İşlemler</th>
         </tr>
       </thead>
       <tbody>
@@ -81,7 +135,6 @@
           <td>{{ tech.id }}</td>
           <td>
             <a href="#"
-               class="text-decoration-none"
                data-bs-toggle="modal"
                data-bs-target="#technicianModal"
                data-id="{{ tech.id }}"
@@ -91,122 +144,126 @@
                data-email="{{ tech.email }}"
                data-telefon="{{ tech.telefon or 'Yok' }}"
                data-uzmanlik="{{ tech.uzmanlik }}"
-               data-adres="{{ tech.adres or 'Belirtilmemiş' }}"
+               data-konum="{{ tech.konum or 'Belirtilmemiş' }}"
                data-onay="{{ tech.onay }}"
                data-iptal="{{ tech.iptal }}"
-               data-aciklama="{{ tech.aciklama or 'Yok' }}">
-               {{ tech.ad }} {{ tech.soyad }}
+               data-referans="{{ tech.referans or 'Yok' }}"
+               data-ek_yetenekler="{{ tech.ek_yetenekler or 'Yok' }}">
+              {{ tech.ad }} {{ tech.soyad }}
             </a>
           </td>
-          <td><a href="mailto:{{ tech.email }}" class="text-decoration-none">{{ tech.email }}</a></td>
+          <td><a href="mailto:{{ tech.email }}">{{ tech.email }}</a></td>
           <td>{{ tech.uzmanlik }}</td>
-          <td>
-            {% if tech.onay %}
-              <span class="badge bg-success fs-6">Onaylı</span>
-            {% else %}
-              <span class="badge bg-warning text-dark fs-6">Beklemede</span>
-            {% endif %}
+<td>
+  {% if tech.konum %}
+    <a href="https://www.google.com/maps?q={{ tech.konum | urlencode }}" 
+       target="_blank" 
+       class="badge bg-light text-dark px-2 py-1" 
+       style="cursor:pointer; text-decoration:none;">
+      {{ tech.konum }}
+    </a>
+  {% else %}
+    <span class="text-muted">Yok</span>
+  {% endif %}
+</td>
+          <td class="text-center">
+            <span class="badge {{ 'bg-success' if tech.onay else 'bg-warning text-dark' }}">{{ 'Onaylı' if tech.onay else 'Beklemede' }}</span>
           </td>
-          <td>
-            {% if tech.iptal %}
-              <span class="badge bg-danger fs-6">İptal Edildi</span>
-            {% else %}
-              <span class="badge bg-secondary fs-6">Aktif</span>
-            {% endif %}
+          <td class="text-center">
+            <span class="badge {{ 'bg-danger' if tech.iptal else 'bg-secondary' }}">{{ 'İptal Edildi' if tech.iptal else 'Aktif' }}</span>
           </td>
-          <td>
-            <a href="{{ url_for('edit_technician', id=tech.id) }}" class="btn btn-sm btn-primary" title="Düzenle">
-              <i class="bi bi-pencil-square"></i>
+          <td class="text-center">
+            <a href="{{ url_for('edit_technician', id=tech.id) }}" class="btn btn-sm btn-outline-warning me-1" title="Düzenle">
+              <i class="bi bi-pencil-fill"></i>
             </a>
-            <button type="button" 
-        class="btn btn-sm btn-danger"
-        title="Sil"
-        data-bs-toggle="modal"
-        data-bs-target="#deleteConfirmModal"
-        data-id="{{ tech.id }}">
-  <i class="bi bi-trash3"></i>
-</button>
-
+            <button 
+              type="button" 
+              class="btn btn-sm btn-outline-danger" 
+              title="Sil"
+              data-bs-toggle="modal" 
+              data-bs-target="#deleteTechnicianModal"
+              data-tech-id="{{ tech.id }}"
+              data-tech-name="{{ tech.ad }} {{ tech.soyad }}">
+              <i class="bi bi-trash-fill"></i>
+            </button>
           </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="7" class="text-center text-muted fst-italic">Kayıtlı tekniker bulunmamaktadır.</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-
-  <div class="text-center mt-4">
-    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary fw-semibold">
-      <i class="bi bi-arrow-left-circle me-1"></i> Geri Dön
-    </a>
+  {% else %}
+  <div class="alert alert-info text-center mt-4">
+    Henüz kayıtlı tekniker bulunmamaktadır.
   </div>
+  {% endif %}
 </div>
 
-<!-- Tekniker Detay Modalı -->
-<div class="modal fade" id="technicianModal" tabindex="-1" aria-labelledby="technicianModalLabel" aria-hidden="true">
+<!-- Tekniker Detay Modal -->
+<div class="modal fade" id="technicianModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-md">
-    <div class="modal-content rounded-4 shadow-lg border-0">
-      <div class="modal-header bg-primary text-white rounded-top">
-        <h5 class="modal-title fw-bold" id="technicianModalLabel">
-          <i class="bi bi-person-badge-fill me-2"></i>Tekniker Detayları
-        </h5>
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="bi bi-person-badge-fill me-2"></i>Tekniker Detayları</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body bg-light px-4 py-4">
+      <div class="modal-body">
         <dl class="row mb-0">
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">ID:</dt>
-          <dd class="col-sm-7 fs-5 fw-semibold" id="modalTechId"></dd>
+          <dt class="col-5 text-secondary fw-semibold">ID:</dt>
+          <dd class="col-7 fw-semibold" id="modalTechId"></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">Ad Soyad:</dt>
-          <dd class="col-sm-7 fs-5 fw-semibold" id="modalTechName"></dd>
+          <dt class="col-5 text-secondary fw-semibold">Ad Soyad:</dt>
+          <dd class="col-7 fw-semibold" id="modalTechName"></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">TC Kimlik No:</dt>
-          <dd class="col-sm-7 fs-5 fw-semibold" id="modalTechTC"></dd>
+          <dt class="col-5 text-secondary fw-semibold">TC:</dt>
+          <dd class="col-7" id="modalTechTC"></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">Email:</dt>
-          <dd class="col-sm-7 fs-6">
-            <a href="#" id="modalTechEmail" class="text-decoration-none text-primary"></a>
-          </dd>
+          <dt class="col-5 text-secondary fw-semibold">Email:</dt>
+          <dd class="col-7"><a href="#" id="modalTechEmail" class="text-decoration-none text-primary"></a></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">Telefon:</dt>
-          <dd class="col-sm-7 fs-6" id="modalTechPhone"></dd>
+          <dt class="col-5 text-secondary fw-semibold">Telefon:</dt>
+          <dd class="col-7" id="modalTechPhone"></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">Uzmanlık:</dt>
-          <dd class="col-sm-7 fs-6" id="modalTechExpertise"></dd>
+          <dt class="col-5 text-secondary fw-semibold">Uzmanlık:</dt>
+          <dd class="col-7" id="modalTechExpertise"></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">Adres:</dt>
-          <dd class="col-sm-7 fs-6" id="modalTechAddress"></dd>
+          <dt class="col-5 text-secondary fw-semibold">Konum:</dt>
+          <dd class="col-7" id="modalTechLocation"></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">Onay Durumu:</dt>
-          <dd class="col-sm-7"><span id="modalTechApproval" class="badge fs-6"></span></dd>
+          <dt class="col-5 text-secondary fw-semibold">Referans:</dt>
+          <dd class="col-7" id="modalTechReferences"></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">İptal Durumu:</dt>
-          <dd class="col-sm-7"><span id="modalTechCancel" class="badge fs-6"></span></dd>
+          <dt class="col-5 text-secondary fw-semibold">Ek Yetenekler:</dt>
+          <dd class="col-7" id="modalTechSkills"></dd>
 
-          <dt class="col-sm-5 text-secondary fw-semibold mb-3">Açıklama:</dt>
-          <dd class="col-sm-7 fs-6 text-muted" id="modalTechDescription"></dd>
+          <dt class="col-5 text-secondary fw-semibold">Onay:</dt>
+          <dd class="col-7"><span id="modalTechApproval" class="badge"></span></dd>
+
+          <dt class="col-5 text-secondary fw-semibold">İptal:</dt>
+          <dd class="col-7"><span id="modalTechCancel" class="badge"></span></dd>
         </dl>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Silme Onay Modalı -->
-<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+<!-- Silme Onay Modal -->
+<div class="modal fade" id="deleteTechnicianModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content rounded-4 shadow border-0">
+    <div class="modal-content border-0 shadow-lg">
       <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title" id="deleteConfirmModalLabel">Silme Onayı</h5>
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Silme Onayı</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">Bu tekniker kaydını silmek istediğinize emin misiniz?</div>
-      <div class="modal-footer">
-        <form id="deleteForm" method="POST">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-          <button type="submit" class="btn btn-danger">Sil</button>
+      <div class="modal-body text-center fs-5">
+        <p><strong id="deleteTechName"></strong> adlı tekniker kaydını silmek istediğinize emin misiniz?</p>
+      </div>
+      <div class="modal-footer border-0 justify-content-between">
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+          Vazgeç
+        </button>
+        <form id="deleteTechForm" method="POST" class="m-0">
+          <button type="submit" class="btn btn-danger rounded-pill px-4">Sil</button>
         </form>
       </div>
     </div>
@@ -216,53 +273,64 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-  // Detay Modalı
-const technicianModal = document.getElementById('technicianModal');
-technicianModal.addEventListener('show.bs.modal', function (event) {
-  const button = event.relatedTarget;
-  const id = button.getAttribute('data-id');
-  const ad = button.getAttribute('data-ad');
-  const soyad = button.getAttribute('data-soyad');
-  const tc = button.getAttribute('data-tc'); // ✅ TC burada okunmalı
-  const email = button.getAttribute('data-email');
-  const telefon = button.getAttribute('data-telefon');
-  const uzmanlik = button.getAttribute('data-uzmanlik');
-  const adres = button.getAttribute('data-adres');
-  const onay = button.getAttribute('data-onay') === 'True';
-  const iptal = button.getAttribute('data-iptal') === 'True';
-  const aciklama = button.getAttribute('data-aciklama');
+  $(document).ready(function () {
+    $('#techniciansTable').DataTable({
+      language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
+      pageLength: 10,
+      lengthMenu: [5, 10, 25, 50, 100],
+      columnDefs: [{ orderable: false, targets: 7 }]
+    });
 
-  document.getElementById('modalTechId').textContent = id;
-  document.getElementById('modalTechName').textContent = ad + ' ' + soyad;
-  document.getElementById('modalTechTC').textContent = tc; // ✅ TC yazdır
-  const emailElem = document.getElementById('modalTechEmail');
-  emailElem.textContent = email;
-  emailElem.href = 'mailto:' + email;
-  document.getElementById('modalTechPhone').textContent = telefon;
-  document.getElementById('modalTechExpertise').textContent = uzmanlik;
-  document.getElementById('modalTechAddress').textContent = adres;
+    // Detay Modal
+    var technicianModal = document.getElementById('technicianModal');
+    technicianModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var id = button.getAttribute('data-id');
+      var ad = button.getAttribute('data-ad');
+      var soyad = button.getAttribute('data-soyad');
+      var tc = button.getAttribute('data-tc');
+      var email = button.getAttribute('data-email');
+      var telefon = button.getAttribute('data-telefon');
+      var uzmanlik = button.getAttribute('data-uzmanlik');
+      var konum = button.getAttribute('data-konum');
+      var referans = button.getAttribute('data-referans');
+      var ek_yetenekler = button.getAttribute('data-ek_yetenekler');
+      var onay = button.getAttribute('data-onay') === 'True';
+      var iptal = button.getAttribute('data-iptal') === 'True';
 
-  const approvalBadge = document.getElementById('modalTechApproval');
-  approvalBadge.textContent = onay ? 'Onaylı' : 'Beklemede';
-  approvalBadge.className = 'badge fs-6 ' + (onay ? 'badge-approval-true' : 'badge-approval-false');
+      document.getElementById('modalTechId').textContent = id;
+      document.getElementById('modalTechName').textContent = ad + ' ' + soyad;
+      document.getElementById('modalTechTC').textContent = tc;
+      document.getElementById('modalTechEmail').textContent = email;
+      document.getElementById('modalTechEmail').href = 'mailto:' + email;
+      document.getElementById('modalTechPhone').textContent = telefon;
+      document.getElementById('modalTechExpertise').textContent = uzmanlik;
+      document.getElementById('modalTechLocation').textContent = konum;
+      document.getElementById('modalTechReferences').textContent = referans;
+      document.getElementById('modalTechSkills').textContent = ek_yetenekler;
+      var approvalBadge = document.getElementById('modalTechApproval');
+      approvalBadge.textContent = onay ? 'Onaylı' : 'Beklemede';
+      approvalBadge.className = 'badge ' + (onay ? 'bg-success' : 'bg-warning text-dark');
+      var cancelBadge = document.getElementById('modalTechCancel');
+      cancelBadge.textContent = iptal ? 'İptal Edildi' : 'Aktif';
+      cancelBadge.className = 'badge ' + (iptal ? 'bg-danger' : 'bg-secondary');
+    });
 
-  const cancelBadge = document.getElementById('modalTechCancel');
-  cancelBadge.textContent = iptal ? 'İptal Edildi' : 'Aktif';
-  cancelBadge.className = 'badge fs-6 ' + (iptal ? 'badge-cancel-true' : 'badge-cancel-false');
-
-  document.getElementById('modalTechDescription').textContent = aciklama || '-';
-});
-
-// Silme Modalı
-const deleteConfirmModal = document.getElementById('deleteConfirmModal');
-deleteConfirmModal.addEventListener('show.bs.modal', function (event) {
-  const button = event.relatedTarget;
-  const id = button.getAttribute('data-id');
-  const form = deleteConfirmModal.querySelector('#deleteForm');
-  form.action = `/admin/technician/delete/${id}`;
-});
-
-
+    // Silme Modal
+    var deleteTechnicianModal = document.getElementById('deleteTechnicianModal');
+    deleteTechnicianModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var techId = button.getAttribute('data-tech-id');
+      var techName = button.getAttribute('data-tech-name');
+      document.getElementById('deleteTechName').textContent = techName;
+      document.getElementById('deleteTechForm').action = `/admin/technician/delete/${techId}`;
+    });
+  });
 </script>
 {% endblock %}

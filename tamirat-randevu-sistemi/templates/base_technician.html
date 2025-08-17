@@ -241,6 +241,38 @@
         localStorage.setItem('theme', !isDark ? 'dark' : 'light');
       });
     });
+
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+  const toasts = document.querySelectorAll('.toast');
+  if (!toasts.length) return;  // Eğer toast yoksa işlemi atla
+
+  toasts.forEach(toastEl => {
+    // Eğer delay süresi data-delay attribute ile verilmişse onu al, yoksa 4000ms default
+    const delay = parseInt(toastEl.getAttribute('data-delay')) || 4000;
+    const toast = new bootstrap.Toast(toastEl, { delay });
+
+    // Toast göster
+    toast.show();
+
+    // Kapanma sonrası işlem eklemek istersen örnek:
+    toastEl.addEventListener('hidden.bs.toast', () => {
+      // Örneğin DOM’dan kaldır
+      toastEl.remove();
+      // İstersen burada başka işlemler de yapabilirsin
+    });
+
+    // Kapatma butonuna tıklanınca hemen gizle
+    const closeBtn = toastEl.querySelector('[data-bs-dismiss="toast"]');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        toast.hide();
+      });
+    }
+  });
+});
+
   </script>
 
   {% block scripts %}{% endblock %}

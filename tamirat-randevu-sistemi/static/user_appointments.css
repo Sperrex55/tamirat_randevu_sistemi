@@ -1,1 +1,80 @@
+ /* DARK MODE STYLES */
+  [data-bs-theme="dark"] body {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
 
+  [data-bs-theme="dark"] .container {
+    color: #ddd;
+  }
+
+  [data-bs-theme="dark"] h2 {
+    color: #7dafff;
+  }
+
+  [data-bs-theme="dark"] .alert-info {
+    background-color: #222;
+    color: #ccc;
+    border-color: #444;
+  }
+
+  [data-bs-theme="dark"] table {
+    background-color: #1e1e1e;
+    color: #ddd;
+    border-color: #444;
+  }
+
+  [data-bs-theme="dark"] thead.table-primary {
+    background-color: #2a2a2a !important;
+    color: #7dafff !important;
+  }
+
+  [data-bs-theme="dark"] tbody tr {
+    border-bottom: 1px solid #444;
+  }
+
+  [data-bs-theme="dark"] tbody tr:hover {
+    background-color: #333;
+  }
+
+  [data-bs-theme="dark"] .badge.bg-info {
+    background-color: #4dabf7 !important;
+    color: #222 !important;
+  }
+
+  [data-bs-theme="dark"] .badge.bg-success {
+    background-color: #198754 !important;
+  }
+
+  [data-bs-theme="dark"] .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #222 !important;
+  }
+
+  [data-bs-theme="dark"] .badge.bg-danger {
+    background-color: #dc3545 !important;
+  }
+
+  [data-bs-theme="dark"] .badge.bg-secondary {
+    background-color: #6c757d !important;
+  }
+
+  [data-bs-theme="dark"] .btn-primary {
+    background-color: #4e54c8;
+    border-color: #4e54c8;
+    color: white;
+  }
+
+  [data-bs-theme="dark"] .btn-primary:hover {
+    background-color: #6f73e5;
+    border-color: #6f73e5;
+  }
+
+  /* Scrollbar for description overflow in dark mode */
+  [data-bs-theme="dark"] td[style*="overflow-y: auto"]::-webkit-scrollbar {
+    width: 6px;
+  }
+  [data-bs-theme="dark"] td[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 3px;
+  }

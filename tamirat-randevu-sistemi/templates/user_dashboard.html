@@ -2,39 +2,41 @@
 
 {% block title %}Üye Dashboard{% endblock %}
 
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='user_dashboard.css') }}">
+{% endblock %}
+
 {% block content %}
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055;">
-      {% for category, message in messages %}
-        <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-          <div class="d-flex">
-            <div class="toast-body">{{ message }}</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055; min-width: 300px;">
+        {% for category, message in messages %}
+          <div class="toast align-items-center text-bg-{{ category }} border-0 show mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3500">
+            <div class="d-flex">
+              <div class="toast-body">{{ message }}</div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+            </div>
           </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="container mt-5">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold">👋 Hoşgeldiniz, <span class="text-primary">{{ user.ad }} {{ user.soyad }}</span></h2>
+      <p class="text-muted fs-5">Teknolojik servis sistemine hoş geldiniz. Aşağıdan randevularınızı ve mesajlarınızı takip edebilirsiniz.</p>
     </div>
-  {% endif %}
-{% endwith %}
 
-<div class="container mt-5">
-
-  <div class="text-center mb-5">
-    <h2 class="fw-bold">👋 Hoşgeldiniz, <span class="text-primary">{{ user.ad }} {{ user.soyad }}</span></h2>
-    <p class="text-muted fs-5">Teknolojik servis sistemine hoş geldiniz. Aşağıdan randevularınızı ve mesajlarınızı takip edebilirsiniz.</p>
-  </div>
-
-  <div class="row g-4">
-    <!-- Kartlar -->
-    {% for stat in [
-      {'icon': 'calendar-check-fill', 'color': 'primary', 'title': 'Toplam Randevu', 'value': total_appointments},
-      {'icon': 'check-circle-fill', 'color': 'success', 'title': 'Tamamlanan Randevu', 'value': completed_appointments},
-      {'icon': 'envelope-fill', 'color': 'danger', 'title': 'Yeni Mesaj', 'value': messages_count}
+    <div class="row g-4">
+      {% for stat in [
+        {'icon': 'calendar-check-fill', 'color': 'primary', 'title': 'Toplam Randevu', 'value': total_appointments},
+        {'icon': 'check-circle-fill', 'color': 'success', 'title': 'Tamamlanan Randevu', 'value': completed_appointments},
+        {'icon': 'envelope-fill', 'color': 'danger', 'title': 'Yeni Mesaj', 'value': messages_count}
       ] %}
       <div class="col-12 col-md-6 col-lg-4">
-        <div class="card shadow-sm border-0 rounded-4 p-4 h-100 text-center stat-card hover-shadow">
+        <div class="card shadow-sm border-0 rounded-4 p-4 h-100 text-center stat-card hover-shadow" tabindex="0" role="button" aria-label="{{ stat.title }}">
           <div class="mb-3 text-{{ stat.color }}">
             <i class="bi bi-{{ stat.icon }} fs-1"></i>
           </div>
@@ -42,141 +44,86 @@
           <p class="text-secondary fs-5 mb-0">{{ stat.title }}</p>
         </div>
       </div>
-    {% endfor %}
-  </div>
-
-  <h3 class="mt-5 mb-3 fw-bold border-start border-4 border-primary ps-3">📢 Aktif Duyurular</h3>
-
-  {% if announcements %}
-    <div class="row g-3">
-      {% for duyuru in announcements %}
-        <div class="col-12">
-          <div class="card border-0 shadow-sm rounded-4 p-3 h-100 announcement-card">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h5 class="fw-semibold mb-0 text-primary">
-                <i class="bi bi-megaphone-fill me-2"></i> {{ duyuru.title }}
-              </h5>
-              <small class="text-muted">{{ duyuru.date_created.strftime('%d.%m.%Y %H:%M') }}</small>
-            </div>
-            <p class="text-secondary mb-0 announcement-content">{{ duyuru.content }}</p>
-          </div>
-        </div>
       {% endfor %}
     </div>
-  {% else %}
-    <div class="alert alert-info d-flex align-items-center gap-2" role="alert">
-      <i class="bi bi-info-circle-fill fs-4"></i>
-      Henüz duyuru bulunmamaktadır.
-    </div>
-  {% endif %}
 
-</div>
+    <h3 class="mt-5 mb-4 fw-bold border-start border-4 border-primary ps-3">📢 Aktif Duyurular</h3>
+    {% if announcements %}
+      <div class="row g-4">
+        {% for duyuru in announcements %}
+          <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 p-4 announcement-card hover-shadow"
+                 role="button" tabindex="0"
+                 data-bs-toggle="modal" data-bs-target="#announcementModal{{ duyuru.id }}"
+                 aria-label="Duyuru: {{ duyuru.title }}">
+              <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <h5 class="fw-semibold mb-0 text-primary d-flex align-items-center flex-grow-1 flex-shrink-1">
+                  <i class="bi bi-megaphone-fill me-2 fs-4"></i> {{ duyuru.title }}
+                </h5>
+                <small class="text-muted fst-italic ms-auto flex-shrink-0">{{ duyuru.date_created.strftime('%d.%m.%Y %H:%M') }}</small>
+              </div>
+              <p class="text-secondary announcement-content mb-0">{{ duyuru.content }}</p>
+            </div>
+          </div>
 
-{% endblock %}
+          <div class="modal fade" id="announcementModal{{ duyuru.id }}" tabindex="-1" aria-labelledby="announcementModalLabel{{ duyuru.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
+              <div class="modal-content"
+                   data-bs-theme="{{ 'dark' if request.cookies.get('theme') == 'dark' else 'light' }}">
+                <div class="modal-header border-0">
+                  <h5 class="modal-title fw-bold" id="announcementModalLabel{{ duyuru.id }}">{{ duyuru.title }}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body fs-5 text-break">
+                  <p>{{ duyuru.content }}</p>
+                  <hr>
+                  <small class="text-muted fst-italic">Oluşturulma Tarihi: {{ duyuru.date_created.strftime('%d.%m.%Y %H:%M') }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info d-flex align-items-center gap-3 rounded-4 shadow-sm" role="alert">
+        <i class="bi bi-info-circle-fill fs-4"></i>
+        <span>Henüz duyuru bulunmamaktadır.</span>
+      </div>
+    {% endif %}
 
-{% block head %}
-<style>
-  /* Kart hover efektleri */
-  .hover-shadow {
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
-  }
-  .hover-shadow:hover {
-    box-shadow: 0 0.8rem 1.5rem rgb(0 0 0 / 0.15);
-    transform: translateY(-4px);
-  }
+    <h3 class="mt-5 mb-3 fw-bold border-start border-4 border-success ps-3">📅 Son Randevularınız</h3>
+    {% if recent_appointments %}
+      <div class="list-group">
+        {% for randevu in recent_appointments %}
+          {% set status_class = 'success' if randevu.status.lower() == 'tamamlandı' else 'warning' %}
+          <a href="{{ url_for('edit_user_appointment', id=randevu.id) }}" 
+             class="list-group-item list-group-item-action d-flex justify-content-between align-items-center hover-shadow rounded-4 mb-2 {% if randevu.status.lower() == 'onaylandı' %}disabled{% endif %}"
+             tabindex="0"
+             role="button"
+             aria-label="Randevu: {{ randevu.category }} - {{ randevu.uzmanlik }} - {{ randevu.date.strftime('%d.%m.%Y') }}">
+            <div>
+              <strong>{{ randevu.date.strftime('%d.%m.%Y') }}</strong> - {{ randevu.category }} / {{ randevu.uzmanlik }}
+              <br>
+              <small class="text-muted">{{ randevu.destek_modeli or 'Belirtilmedi' }} - {{ randevu.description[:50] }}{% if randevu.description|length > 50 %}...{% endif %}</small>
+            </div>
+            <span class="badge bg-{{ status_class }}">{{ randevu.status }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-warning" role="alert">
+        Henüz kayıtlı randevunuz bulunmamaktadır.
+      </div>
+    {% endif %}
+  </div>
 
-  /* Duyuru içerik satır sınırı */
-  .announcement-content {
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const toastElList = [].slice.call(document.querySelectorAll('.toast'));
+      toastElList.forEach(toastEl => {
+        new bootstrap.Toast(toastEl).show();
+      });
+    });
+  </script>
 
-  /* Duyuru kart hover */
-  .announcement-card:hover {
-    background-color: #f8f9fa;
-    transition: background-color 0.3s ease;
-  }
-
-  /* Toast buton daha belirgin */
-  .toast .btn-close {
-    filter: brightness(0) invert(1);
-  }
-
-  /* Başlık altındaki border ve padding */
-  h3.border-start {
-    padding-left: 0.75rem;
-  }
-
-  /* Duyuru içerik satır sınırı sadece md ve üstü için */
-  @media (min-width: 768px) {
-    .announcement-content {
-      display: -webkit-box;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-
-  /* Mobilde duyuruyu tam göster */
-  @media (max-width: 767.98px) {
-    .announcement-content {
-      display: block;
-      -webkit-line-clamp: unset;
-      -webkit-box-orient: unset;
-      overflow: visible;
-      text-overflow: unset;
-    }
-  }
-
-  /* ======= DARK MODE STYLES ======= */
-
-  [data-bs-theme="dark"] .container {
-    color: #e0e0e0;
-  }
-
-  [data-bs-theme="dark"] .text-primary {
-    color: #7dafff !important;
-  }
-
-  [data-bs-theme="dark"] .text-muted {
-    color: #aaa !important;
-  }
-
-  [data-bs-theme="dark"] .card {
-    background-color: #1e1e1e !important;
-    border-color: #444 !important;
-    color: #ddd;
-  }
-
-  [data-bs-theme="dark"] .card .text-secondary {
-    color: #bbb !important;
-  }
-
-  [data-bs-theme="dark"] .announcement-card:hover {
-    background-color: #333 !important;
-  }
-
-  [data-bs-theme="dark"] .alert-info {
-    background-color: #222 !important;
-    color: #ccc !important;
-    border-color: #444 !important;
-  }
-
-  [data-bs-theme="dark"] .toast.align-items-center.text-bg-success,
-  [data-bs-theme="dark"] .toast.align-items-center.text-bg-danger,
-  [data-bs-theme="dark"] .toast.align-items-center.text-bg-primary,
-  [data-bs-theme="dark"] .toast.align-items-center.text-bg-warning,
-  [data-bs-theme="dark"] .toast.align-items-center.text-bg-info {
-    color: #fff !important;
-  }
-
-  [data-bs-theme="dark"] .toast .btn-close {
-    filter: brightness(1) invert(0);
-  }
-
-</style>
 {% endblock %}

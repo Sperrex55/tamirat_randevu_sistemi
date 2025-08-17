@@ -46,7 +46,7 @@
           <select class="form-select shadow-sm" id="hedef_kitle" name="hedef_kitle" required>
             <option value="" disabled selected>Bir hedef kitle seçiniz</option>
             <option value="tekniker" {% if duyuru.target_group == 'tekniker' %}selected{% endif %}>Teknikerler</option>
-            <option value="kullanici" {% if duyuru.target_group == 'kullanici' %}selected{% endif %}>Üyeler</option>
+            <option value="uye" {% if duyuru.target_group == 'uye' %}selected{% endif %}>Üyeler</option>
           </select>
         </div>
 

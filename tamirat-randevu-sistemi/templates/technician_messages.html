@@ -24,11 +24,11 @@
 {% endwith %}
 
 <div class="user-list-container">
-  <!-- Kullanıcı Listesi -->
+  <!-- Sol taraf: Kullanıcı listesi -->
   <div class="user-list-wrapper">
     <div class="user-search">
       <input type="text" id="userSearchInput" placeholder="Kullanıcı ara..." />
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="var(--color-user-name-muted)" class="bi bi-search" viewBox="0 0 16 16">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="var(--text-muted)" viewBox="0 0 16 16">
         <path d="M11 6a5 5 0 1 1-1.018-3.218l3.85 3.85a1 1 0 0 1-1.414 1.414l-3.85-3.85A4.978 4.978 0 0 1 11 6z"/>
       </svg>
     </div>
@@ -53,7 +53,7 @@
     </div>
   </div>
 
-  <!-- Mesajlaşma Alanı -->
+  <!-- Sağ taraf: Chat alanı -->
   <div class="chat-area">
     <div class="chat-header" id="chatWithTitle">
       <span>Bir kullanıcı seçin</span>
@@ -65,11 +65,12 @@
     </div>
 
     <form id="chatInputForm" class="chat-input-area" style="display:none;" novalidate>
-      <textarea id="chatInput" placeholder="Mesaj yazın..." rows="3" required></textarea>
-      <button type="submit" disabled>Gönder</button>
+      <textarea id="chatInput" placeholder="Mesaj yazın..." rows="1" required></textarea>
+      <button type="submit" disabled><i class="bi bi-send-fill"></i></button>
     </form>
   </div>
 </div>
+
 
 {% endblock %}
 

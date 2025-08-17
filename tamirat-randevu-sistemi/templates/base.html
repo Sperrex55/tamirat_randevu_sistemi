@@ -17,146 +17,7 @@
   <!-- Özel CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 
-  <style>
-  /* Tema: Dark */
-  [data-bs-theme="dark"] body {
-    background-color: #121212;
-    color: #e4e4e4;
-  }
-
-  [data-bs-theme="dark"] .navbar,
-  [data-bs-theme="dark"] .footer,
-  [data-bs-theme="dark"] .bg-primary {
-    background-color: #1f1f1f !important;
-  }
-
-  [data-bs-theme="dark"] .card {
-    background-color: #1e1e1e;
-    border-color: #444;
-  }
-
-  [data-bs-theme="dark"] .modal-content {
-    background-color: #222;
-    color: #fff;
-  }
-
-  [data-bs-theme="dark"] .form-control {
-    background-color: #2a2a2a;
-    color: #fff;
-    border-color: #555;
-  }
-
-  [data-bs-theme="dark"] .footer-link,
-  [data-bs-theme="dark"] .social-link {
-    color: #ccc;
-  }
-
-  .form-check-input:checked {
-    background-color: #f8f9fa;
-    border-color: #f8f9fa;
-  }
-
-  .form-check-input {
-    cursor: pointer;
-  }
-
-  .form-check-label {
-    cursor: pointer;
-    user-select: none;
-  }
-
-  /* Sağ alt tema butonu */
-  #themeToggleBtn {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1080;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: none;
-    background-color: #4e54c8;
-    color: white;
-    font-size: 0; /* Metin gizle */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s ease;
-    overflow: visible;
-  }
-  #themeToggleBtn:hover {
-    background-color: #8f94fb;
-  }
-
-  /* Dark modda buton rengi */
-  [data-bs-theme="dark"] #themeToggleBtn {
-    background-color: #222;
-    color: #f1f1f1;
-  }
-  [data-bs-theme="dark"] #themeToggleBtn:hover {
-    background-color: #555;
-  }
-
-  /* Ay ve Güneş simgeleri (pseudo elementler) */
-  #themeToggleBtn::before,
-  #themeToggleBtn::after {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform-origin: center center;
-    transform-style: preserve-3d;
-    font-size: 24px;
-    user-select: none;
-    pointer-events: none;
-    transition: transform 0.5s ease, opacity 0.5s ease;
-  }
-
-  #themeToggleBtn::before {
-    content: "🌙"; /* Ay simgesi */
-    color: #fff;
-    transform: translate(-50%, -50%) translateY(0) scale(1);
-    opacity: 1;
-    z-index: 2;
-  }
-
-  #themeToggleBtn::after {
-    content: "☀️"; /* Güneş simgesi */
-    color: #fcd440;
-    transform: translate(-50%, -50%) translateY(-10px) scale(0.5);
-    opacity: 0;
-    z-index: 1;
-  }
-
-  /* Dark modda animasyonlu geçiş */
-  [data-bs-theme="dark"] #themeToggleBtn::before {
-    opacity: 0;
-    transform: translate(-50%, -50%) translateY(10px) scale(0.5);
-    z-index: 1;
-  }
-
-  [data-bs-theme="dark"] #themeToggleBtn::after {
-    opacity: 1;
-    transform: translate(-50%, -50%) translateY(0) scale(1);
-    z-index: 2;
-  }
-
-  /* Mobilde biraz büyütülmüş */
-@media (max-width: 575.98px) {
-  #themeToggleBtn {
-    width: 50px !important;
-    height: 50px !important;
-    bottom: 20px !important;
-    right: 20px !important;
-  }
-  #themeToggleBtn::before,
-  #themeToggleBtn::after {
-    font-size: 24px !important;
-  }
-}
-
-</style>
+ 
 
 </head>
 
@@ -343,6 +204,36 @@
   });
 });
 
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const toasts = document.querySelectorAll('.toast');
+  if (!toasts.length) return;  // Eğer toast yoksa işlemi atla
+
+  toasts.forEach(toastEl => {
+    // Eğer delay süresi data-delay attribute ile verilmişse onu al, yoksa 4000ms default
+    const delay = parseInt(toastEl.getAttribute('data-delay')) || 4000;
+    const toast = new bootstrap.Toast(toastEl, { delay });
+
+    // Toast göster
+    toast.show();
+
+    // Kapanma sonrası işlem eklemek istersen örnek:
+    toastEl.addEventListener('hidden.bs.toast', () => {
+      // Örneğin DOM’dan kaldır
+      toastEl.remove();
+      // İstersen burada başka işlemler de yapabilirsin
+    });
+
+    // Kapatma butonuna tıklanınca hemen gizle
+    const closeBtn = toastEl.querySelector('[data-bs-dismiss="toast"]');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        toast.hide();
+      });
+    }
+  });
+});
 
   </script>
 </body>
