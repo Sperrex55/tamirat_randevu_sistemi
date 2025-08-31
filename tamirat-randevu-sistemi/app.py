@@ -11,13 +11,17 @@ import logging
 from flask import jsonify
 from sqlalchemy import func
 from flask_socketio import SocketIO, emit, join_room,leave_room
+from calendar import month_name
+from sqlalchemy import extract
+import eventlet
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'gelistirme_anahtari'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///teknoloji.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-socketio = SocketIO(app, cors_allowed_origins="*")
+
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 
 
@@ -132,12 +136,13 @@ class Announcement(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     if user_id.startswith("user-"):
-        return User.query.get(int(user_id[5:]))
+        return db.session.get(User, int(user_id[5:]))
     elif user_id.startswith("tech-"):
-        return Technician.query.get(int(user_id[5:]))
+        return db.session.get(Technician, int(user_id[5:]))
     elif user_id.startswith("admin-"):
-        return Admin.query.get(int(user_id[6:]))
-    return None
+        return db.session.get(Admin, int(user_id[6:]))
+
+   
 
 
 @app.route('/')
@@ -449,35 +454,52 @@ def user_dashboard():
         flash('Bu sayfaya erişim yetkiniz yok!', 'danger')
         return redirect(url_for('index'))
 
-    # Toplam randevular
+    # ------------------ KPI VERİLERİ ------------------
     total_appointments = Appointment.query.filter_by(user_id=current_user.id).count()
 
-    # Tamamlanan randevular (case-insensitive kontrol)
+    # status alanını case-insensitive kontrol edelim
     completed_appointments = Appointment.query.filter(
-        Appointment.user_id == current_user.id,
-        func.lower(Appointment.status) == 'tamamlandı'  # veritabanındaki durum neyse onu yazabilirsiniz
-    ).count()
+    Appointment.user_id == current_user.id,
+    func.lower(Appointment.status).in_(['tamamlandı', 'onaylandı'])
+).count()
 
-    # Okunmamış mesaj sayısı
     messages_count = Message.query.filter_by(user_id=current_user.id, is_read=False).count()
 
-    # Üyeler için duyurular
+    # ------------------ DUYURULAR ------------------
     announcements = Announcement.query.filter_by(target_group='uye') \
                     .order_by(Announcement.date_created.desc()).all()
 
-    # Son 5 randevu
+    # ------------------ SON 5 RANDEVU ------------------
     recent_appointments = Appointment.query.filter_by(user_id=current_user.id) \
                             .order_by(Appointment.date.desc()) \
                             .limit(5).all()
 
+    # ------------------ AYLIK RANDEVU VERİLERİ (BU YIL) ------------------
+    month_name = ["", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+    now = datetime.now()
+    monthly_values = []
+    monthly_labels = []
+
+    for month in range(1, 13):
+        count = Appointment.query.filter(
+            Appointment.user_id == current_user.id,
+            extract('month', Appointment.date) == month,
+            extract('year', Appointment.date) == now.year
+        ).count()
+        monthly_values.append(count)
+        monthly_labels.append(month_name[month])
+
+    # ------------------ TEMPLATE'E GÖNDER ------------------
     return render_template('user_dashboard.html',
                            user=current_user,
                            total_appointments=total_appointments,
                            completed_appointments=completed_appointments,
                            messages_count=messages_count,
                            announcements=announcements,
-                           recent_appointments=recent_appointments)
-
+                           recent_appointments=recent_appointments,
+                           monthly_labels=monthly_labels,
+                           monthly_values=monthly_values)
 
 
 
@@ -577,7 +599,6 @@ def get_current_user_real_id():
     """Kullanıcının gerçek ID'sini alır"""
     return int(current_user.get_id().split('-')[1])
 
-
 # Kullanıcı mesaj listesi sayfası
 @app.route('/user/messages', methods=['GET'])
 @login_required
@@ -591,7 +612,6 @@ def user_messages():
     technicians = [appt.technician for appt in appointments if appt.technician is not None]
 
     return render_template('user_messages.html', technicians=technicians)
-
 
 # Belirli tekniker ile mesajları al
 @app.route('/user/messages/<int:tech_id>/get_messages', methods=['GET'])
@@ -608,18 +628,17 @@ def user_get_messages(tech_id):
             {
                 'body': m.body,
                 'from_user': m.sender_type == 'user',
-                'timestamp': m.created_at.strftime("%Y-%m-%d %H:%M")
+                'timestamp': m.created_at.strftime("%d.%m.%Y %H:%M")
             } for m in messages
         ]
     })
 
-
-# Kullanıcı mesaj gönderimi (HTTP + Socket.IO)
+# Kullanıcı mesaj gönderimi (HTTP)
 @app.route('/user/messages/<int:tech_id>/send', methods=['POST'])
 @login_required
 def user_send_message(tech_id):
     user_id = get_current_user_real_id()
-    body = request.form.get('message_body')
+    body = request.form.get('message_body', '').strip()
     if not body:
         return jsonify({'success': False, 'message': 'Mesaj boş olamaz'})
 
@@ -634,146 +653,71 @@ def user_send_message(tech_id):
     db.session.add(message)
     db.session.commit()
 
-    # Socket.IO ile canlı gönderim (oda kullan)
+    # Socket.IO ile canlı gönderim
     room = f"user_{user_id}_tech_{tech_id}"
     socketio.emit('receive_message', {
-        'tech_id': tech_id,
+        'user_id': user_id,
+        'technician_id': tech_id,
         'body': body,
-        'from_user': True,
-        'timestamp': message.created_at.strftime("%Y-%m-%d %H:%M")
+        'sender_type': 'user',
+        'timestamp': message.created_at.strftime("%d.%m.%Y %H:%M")
     }, room=room)
 
     return jsonify({'success': True, 'message': 'Mesaj gönderildi'})
 
-
-# Socket.IO: Odaya katıl
+# Socket.IO: Odaya katılma / ayrılma
 @socketio.on('join_room')
 def handle_join(data):
-    tech_id = data.get('tech_id')
-    if not tech_id:
+    user_id = data.get('user_id')
+    tech_id = data.get('technician_id')
+    if not user_id or not tech_id:
         return
-
-    user_id = get_current_user_real_id()
-    room = f"user_{user_id}_tech_{tech_id}"
+    room = f'user_{user_id}_tech_{tech_id}'
     join_room(room)
-    emit('joined_room', {"room": room})
+    emit('joined_room', {'room': room})
 
-
-# Socket.IO: Odadan çık
 @socketio.on('leave_room')
 def handle_leave(data):
-    tech_id = data.get('tech_id')
-    if not tech_id:
+    user_id = data.get('user_id')
+    tech_id = data.get('technician_id')
+    if not user_id or not tech_id:
         return
-
-    user_id = get_current_user_real_id()
-    room = f"user_{user_id}_tech_{tech_id}"
+    room = f'user_{user_id}_tech_{tech_id}'
     leave_room(room)
-    emit('left_room', {"room": room})
+    emit('left_room', {'room': room})
 
-
-# Socket.IO: Kullanıcı canlı mesaj gönderimi
 @socketio.on('send_message')
 def handle_send_socket_message(data):
-    """
-    data = {
-        "tech_id": int,
-        "body": str
-    }
-    """
-    user_id = get_current_user_real_id()
-    tech_id = data.get('tech_id')
-    body = data.get('body')
-    if not tech_id or not body:
+    user_id = int(data.get('user_id'))
+    tech_id = int(data.get('technician_id'))
+    body = data.get('body', '').strip()
+    sender_type = data.get('sender_type', '').lower()
+
+    if not user_id or not tech_id or not body or sender_type not in ['user', 'technician']:
         return
 
-    try:
-        new_msg = Message(
-            user_id=user_id,
-            technician_id=tech_id,
-            sender_type='user',
-            subject=f"Mesaj - {datetime.now().strftime('%d.%m.%Y %H:%M')}",
-            body=body,
-            is_read=False,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(new_msg)
-        db.session.commit()
+    msg = Message(
+        user_id=user_id,
+        technician_id=tech_id,
+        body=body,
+        sender_type=sender_type,
+        created_at=datetime.utcnow()
+    )
+    db.session.add(msg)
+    db.session.commit()
 
-        room = f"user_{user_id}_tech_{tech_id}"
-        emit('receive_message', {
-            'id': new_msg.id,
-            'body': body,
-            'timestamp': new_msg.created_at.strftime('%d.%m.%Y %H:%M'),
-            'from_user': True
-        }, room=room)
-
-    except Exception as e:
-        db.session.rollback()
-        print(f"SocketIO kullanıcı mesaj hatası: {e}")
+    room = f'user_{user_id}_tech_{tech_id}'
+    socketio.emit('receive_message', {
+        'user_id': user_id,
+        'technician_id': tech_id,
+        'body': body,
+        'sender_type': sender_type,
+        'timestamp': msg.created_at.strftime("%d.%m.%Y %H:%M")
+    }, room=room)
 
 
 
 
-
-# Canlı mesaj gönderme (hem tekniker hem kullanıcı)
-@socketio.on('send_message')
-def handle_send_message(data):
-    """
-    data = {
-        "user_id": int,
-        "technician_id": int,
-        "body": str,
-        "sender_type": "technician" / "user"
-    }
-    """
-    user_id = data.get('user_id')
-    technician_id = data.get('technician_id')
-    body = data.get('body')
-    sender_type = data.get('sender_type')
-
-    if not user_id or not technician_id or not body or not sender_type:
-        return
-
-    # Mesaj DB'ye kaydedilir
-    try:
-        new_msg = Message(
-            user_id=user_id,
-            technician_id=technician_id,
-            sender_type=sender_type,
-            subject=f"Mesaj - {datetime.now().strftime('%d.%m.%Y %H:%M')}",
-            body=body,
-            is_read=False,
-            created_at=datetime.now()
-        )
-        db.session.add(new_msg)
-        db.session.commit()
-
-        # Ortak oda ismi
-        room = f"tech_{technician_id}_user_{user_id}"
-        emit('receive_message', {
-            "id": new_msg.id,
-            "body": body,
-            "timestamp": new_msg.created_at.strftime('%d.%m.%Y %H:%M'),
-            "from_technician": sender_type == 'technician'
-        }, room=room)
-
-    except Exception as e:
-        db.session.rollback()
-        print(f"SocketIO mesaj hatası: {e}")
-
-
-# Odaya katıl
-@socketio.on('join_room')
-def handle_join_room(data):
-    """
-    data = {"user_id": int, "technician_id": int}
-    """
-    user_id = data.get('user_id')
-    technician_id = data.get('technician_id')
-    if user_id and technician_id:
-        room = f"tech_{technician_id}_user_{user_id}"
-        join_room(room)
 
 
 
@@ -878,20 +822,65 @@ def get_current_user_real_id():
 @app.route('/technician/messages')
 @login_required
 def technician_messages():
+    # Sadece teknisyenler erişebilir
     if not current_user.get_id().startswith("tech-"):
         flash("Bu sayfaya erişim yetkiniz yok.", "danger")
         return redirect(url_for('index'))
 
     technician_id = get_current_user_real_id()
+
+    # Onaylı randevulardan kullanıcı ID'lerini al
     approved_appointments = Appointment.query.filter_by(
         technician_id=technician_id,
         status="Onaylandı"
     ).all()
-
     user_ids = {appt.user_id for appt in approved_appointments}
 
-    users = User.query.filter(User.id.in_(user_ids)).all() if user_ids else []
-    return render_template('technician_messages.html', users=users, TECHNICIAN_ID=technician_id)
+    users_data = []
+
+    if user_ids:
+        # Kullanıcıları çek ve her kullanıcı için son mesaj ve okunmamış sayısını al
+        users = User.query.filter(User.id.in_(user_ids)).all()
+        for user in users:
+            # Son mesaj (kullanıcı veya teknisyen fark etmez)
+            last_message = (
+                Message.query
+                .filter_by(user_id=user.id, technician_id=technician_id)
+                .order_by(Message.created_at.desc())
+                .first()
+            )
+
+            # Okunmamış mesaj sayısı (sadece kullanıcıdan gelen mesajlar)
+            unread_count = (
+                Message.query
+                .filter_by(
+                    user_id=user.id,
+                    technician_id=technician_id,
+                    sender_type='user',
+                    is_read=False
+                )
+                .count()
+            )
+
+            users_data.append({
+                'user': user,
+                'last_message': last_message,
+                'unread_count': unread_count
+            })
+
+        # Son mesaja göre sırala (WhatsApp tarzı)
+        users_data.sort(
+            key=lambda x: x['last_message'].created_at if x['last_message'] else datetime.min,
+            reverse=True
+        )
+
+    return render_template(
+        'technician_messages.html',
+        users_data=users_data,
+        TECHNICIAN_ID=technician_id
+    )
+
+
 
 @app.route('/technician/messages/<int:user_id>/get_messages')
 @login_required
@@ -901,9 +890,9 @@ def get_messages(user_id):
 
     technician_id = get_current_user_real_id()
 
-    messages = Message.query.filter(
-        (Message.technician_id == technician_id) &
-        (Message.user_id == user_id)
+    messages = Message.query.filter_by(
+        technician_id=technician_id,
+        user_id=user_id
     ).order_by(Message.created_at.asc()).all()
 
     messages_data = [
@@ -911,23 +900,41 @@ def get_messages(user_id):
             "id": msg.id,
             "body": msg.body,
             "timestamp": msg.created_at.strftime('%d.%m.%Y %H:%M'),
-            "from_technician": (msg.sender_type == 'technician'),
-        } for msg in messages
+            "from_technician": msg.sender_type == 'technician',
+        }
+        for msg in messages
     ]
+
+    # Kullanıcıdan gelen mesajları okunmuş yap
+    unread_messages = Message.query.filter_by(
+        technician_id=technician_id,
+        user_id=user_id,
+        sender_type='user',
+        is_read=False
+    ).all()
+    for msg in unread_messages:
+        msg.is_read = True
+    if unread_messages:
+        db.session.commit()
+
     return jsonify(success=True, messages=messages_data)
+
 
 @app.route('/technician/send_message', methods=['POST'])
 @login_required
 def technician_send_message():
+    # Sadece teknikerler erişebilir
     if not current_user.get_id().startswith("tech-"):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify(success=False, message="Bu işlem için yetkiniz yok."), 403
         flash("Bu işlem için yetkiniz yok.", "danger")
         return redirect(url_for('index'))
 
-    user_id = request.form.get('user_id')
-    message_body = request.form.get('message_body')
-    if not user_id or not message_body:
+    user_id_raw = request.form.get('user_id')
+    message_body = request.form.get('message_body', '').strip()
+
+    # Boş alan kontrolü
+    if not user_id_raw or not message_body:
         msg = 'Lütfen tüm alanları doldurun.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify(success=False, message=msg), 400
@@ -935,27 +942,40 @@ def technician_send_message():
         return redirect(url_for('technician_messages'))
 
     try:
+        user_id = int(user_id_raw)  # int dönüşümü güvenli hale getirildi
+    except ValueError:
+        msg = 'Geçersiz kullanıcı ID.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify(success=False, message=msg), 400
+        flash(msg, 'warning')
+        return redirect(url_for('technician_messages'))
+
+    try:
+        technician_id = get_current_user_real_id()
         subject = f"Tekniker Mesajı - {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+
+        # Mesajı kaydet
         new_message = Message(
-            user_id=int(user_id),
-            technician_id=get_current_user_real_id(),
+            user_id=user_id,
+            technician_id=technician_id,
             sender_type='technician',
             subject=subject,
             body=message_body,
             is_read=False,
-            created_at=datetime.now()
+            created_at=datetime.utcnow()
         )
         db.session.add(new_message)
         db.session.commit()
 
-        # Socket.IO ile kullanıcıya anında mesaj gönder
+        # Socket.IO ile mesajı doğru room’a gönder
+        room = f"user_{user_id}_tech_{technician_id}"
         socketio.emit('receive_message', {
-            'user_id': int(user_id),
-            'technician_id': get_current_user_real_id(),
+            'user_id': user_id,
+            'technician_id': technician_id,
             'body': message_body,
             'from_technician': True,
             'timestamp': new_message.created_at.strftime('%d.%m.%Y %H:%M')
-        }, room=f'user_{user_id}')
+        }, room=room)
 
     except Exception as e:
         db.session.rollback()
@@ -966,61 +986,69 @@ def technician_send_message():
         flash(msg, 'danger')
         return redirect(url_for('technician_messages'))
 
+    # Ajax isteği için JSON dönüşü
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify(success=True, message="Mesaj başarıyla gönderildi.")
+
     flash('Mesaj başarıyla gönderildi.', 'success')
     return redirect(url_for('technician_messages'))
 
-# ------------------------
-# Socket.IO Eventleri
-# ------------------------
+
+
 @socketio.on('join_room')
 def handle_join(data):
     user_id = data.get('user_id')
-    if user_id:
-        join_room(f'user_{user_id}')
-        emit('joined_room', {'user_id': user_id})
+    tech_id = data.get('technician_id')
+    if not user_id or not tech_id:
+        return
+    room = f'user_{user_id}_tech_{tech_id}'
+    join_room(room)
+    emit('joined_room', {'room': room}, room=room)
 
 @socketio.on('leave_room')
 def handle_leave(data):
     user_id = data.get('user_id')
-    if user_id:
-        leave_room(f'user_{user_id}')
-        emit('left_room', {'user_id': user_id})
+    tech_id = data.get('technician_id')
+    if not user_id or not tech_id:
+        return
+    room = f'user_{user_id}_tech_{tech_id}'
+    leave_room(room)
+    emit('left_room', {'room': room}, room=room)
 
 @socketio.on('send_message')
 def handle_send_message(data):
-    user_id = data.get('user_id')
-    technician_id = data.get('technician_id')
-    body = data.get('body')
-    sender_type = data.get('sender_type')
-
-    # Mesaj veritabanına kaydedilebilir
     try:
-        msg = Message(
-            user_id=user_id,
-            technician_id=technician_id,
-            sender_type=sender_type,
-            body=body,
-            subject=f"{sender_type.capitalize()} Mesajı - {datetime.now().strftime('%d.%m.%Y %H:%M')}",
-            is_read=False,
-            created_at=datetime.now()
-        )
-        db.session.add(msg)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"Socket message save error: {e}")
+        user_id = int(data.get('user_id'))
+        tech_id = int(data.get('technician_id'))
+        body = data.get('body', '').strip()
+        sender_type = data.get('sender_type', '').lower()
+    except (ValueError, AttributeError):
         return
 
-    # Hem tekniker hem kullanıcı odasına mesajı gönder
+    if not user_id or not tech_id or not body or sender_type not in ['user', 'technician']:
+        return
+
+    # Mesajı DB'ye kaydet
+    msg = Message(
+        user_id=user_id,
+        technician_id=tech_id,
+        body=body,
+        sender_type=sender_type,
+        created_at=datetime.utcnow(),
+        is_read=False
+    )
+    db.session.add(msg)
+    db.session.commit()
+
+    room = f'user_{user_id}_tech_{tech_id}'
+    # Canlı olarak tüm odadaki katılımcılara gönder
     socketio.emit('receive_message', {
         'user_id': user_id,
-        'technician_id': technician_id,
+        'technician_id': tech_id,
         'body': body,
-        'from_technician': (sender_type == 'technician'),
+        'from_technician': sender_type == 'technician',
         'timestamp': msg.created_at.strftime('%d.%m.%Y %H:%M')
-    }, room=f'user_{user_id}')
+    }, room=room)
 
 
 
@@ -1631,11 +1659,11 @@ def delete_technician(id):
 
 
 
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    socketio.run(app, debug=True)
 
-import os
-if __name__ == "__main__":
-   app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
-
-
-
+#import os
+#if __name__ == "__main__":
+#   app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

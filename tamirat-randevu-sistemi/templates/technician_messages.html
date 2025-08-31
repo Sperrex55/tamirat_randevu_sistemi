@@ -1,9 +1,9 @@
 {% extends "base_technician.html" %}
 
-{% block title %}Mesajlar - Premium{% endblock %}
+{% block title %}Mesajlar{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='technician_messages.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='technician_messages.css') }}" />
 {% endblock %}
 
 {% block content %}
@@ -24,34 +24,63 @@
 {% endwith %}
 
 <div class="user-list-container">
-  <!-- Sol taraf: Kullanıcı listesi -->
-  <div class="user-list-wrapper">
-    <div class="user-search">
-      <input type="text" id="userSearchInput" placeholder="Kullanıcı ara..." />
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="var(--text-muted)" viewBox="0 0 16 16">
-        <path d="M11 6a5 5 0 1 1-1.018-3.218l3.85 3.85a1 1 0 0 1-1.414 1.414l-3.85-3.85A4.978 4.978 0 0 1 11 6z"/>
-      </svg>
-    </div>
-    <div class="user-list">
-      <ul id="userListUl">
-        {% for user in users %}
-        <li class="user-list-item" data-user-id="{{ user.id }}" data-user-name="{{ user.ad }} {{ user.soyad }}">
-          <div class="d-flex align-items-center">
-            <div class="avatar">{{ user.ad[0]|upper }}{{ user.soyad[0]|upper }}</div>
-            <div class="user-name">{{ user.ad }} {{ user.soyad }}</div>
+  
+<!-- Sol panel: WhatsApp tarzı kullanıcı listesi -->
+<div class="user-list-wrapper">
+  <div class="user-search">
+    <input type="text" id="userSearchInput" placeholder="Kullanıcı ara..." />
+  </div>
+  <ul class="user-list" id="userListUl">
+    {% for entry in users_data %}
+      {% set user = entry.user %}
+      {% set last_message = entry.last_message %}
+      {% set unread_count = entry.unread_count %}
+      <li class="user-list-item" data-user-id="{{ user.id }}" data-user-name="{{ user.ad }} {{ user.soyad }}">
+        <div class="user-info-left">
+          <div class="avatar" title="{{ user.ad }} {{ user.soyad }}">
+            {{ user.ad[0]|upper }}{{ user.soyad[0]|upper }}
           </div>
-          <button
-            class="btn btn-sm btn-outline-primary btn-send-message"
-            title="Mesaj Gönder"
-            data-user-id="{{ user.id }}"
-            data-user-name="{{ user.ad }} {{ user.soyad }}">
+          <div class="user-info">
+            <div class="user-name" title="{{ user.ad }} {{ user.soyad }}">
+              {{ user.ad }} {{ user.soyad }}
+            </div>
+            <div class="user-last-message" title="{% if last_message %}{{ last_message.body }}{% else %}Henüz mesaj yok{% endif %}">
+              {% if last_message %}
+                {% if last_message.sender_type == 'technician' %}
+                  {{ last_message.body[:35] ~ ('...' if last_message.body|length > 35 else '') }}
+                {% else %}
+                  Sen: {{ last_message.body[:35] ~ ('...' if last_message.body|length > 35 else '') }}
+                {% endif %}
+              {% else %}
+                Henüz mesaj yok
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="user-info-right">
+          <span class="user-time">
+            {% if last_message %}
+              {{ last_message.created_at.strftime('%H:%M') }}
+            {% else %}
+              --:--
+            {% endif %}
+          </span>
+          {% if unread_count > 0 %}
+            <span class="user-unread-badge">{{ unread_count }}</span>
+          {% else %}
+            <span class="user-unread-badge d-none">0</span>
+          {% endif %}
+          <button class="btn-send-message" data-user-id="{{ user.id }}" data-user-name="{{ user.ad }} {{ user.soyad }}" title="Mesaj gönder">
             <i class="bi bi-send-fill"></i>
           </button>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-  </div>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+
+
 
   <!-- Sağ taraf: Chat alanı -->
   <div class="chat-area">
@@ -61,7 +90,13 @@
     </div>
 
     <div class="message-list" id="messageList">
-      <div class="empty-placeholder">Kullanıcı seçildiğinde mesajlar burada görünecek.</div>
+     <div class="empty-placeholder">
+  <div class="placeholder-icon">💬</div>
+  <div class="placeholder-text">
+    Kullanıcı seçildiğinde mesajlar burada görünecek.
+  </div>
+</div>
+
     </div>
 
     <form id="chatInputForm" class="chat-input-area" style="display:none;" novalidate>
@@ -71,16 +106,16 @@
   </div>
 </div>
 
-
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
 (() => {
-  // Element Seçimleri
+  const socket = io();
+
   const userSearchInput = document.getElementById('userSearchInput');
   const userListUl = document.getElementById('userListUl');
-  const userItems = userListUl.querySelectorAll('.user-list-item');
   const messageListDiv = document.getElementById('messageList');
   const chatWithTitle = document.getElementById('chatWithTitle').querySelector('span');
   const closeChatBtn = document.getElementById('closeChatBtn');
@@ -91,116 +126,92 @@
   let activeUserId = null;
   let activeUserName = null;
 
-  // Kullanıcı Arama
+  // Kullanıcı arama
   userSearchInput.addEventListener('input', () => {
     const filter = userSearchInput.value.toLowerCase();
-    userItems.forEach(item => {
-      const name = item.getAttribute('data-user-name').toLowerCase();
-      item.style.display = name.includes(filter) ? '' : 'none';
+    userListUl.querySelectorAll('.user-list-item').forEach(item => {
+      item.style.display = item.dataset.userName.toLowerCase().includes(filter) ? '' : 'none';
     });
   });
 
-  // Kullanıcı Seçimi
-  userItems.forEach(item => {
-    item.addEventListener('click', (e) => {
-      // Mesaj gönderme butonu tıklaması ise
-      if (e.target.closest('button.btn-send-message')) {
-        e.stopPropagation();
-        const userId = e.target.closest('button').getAttribute('data-user-id');
-        const userName = e.target.closest('button').getAttribute('data-user-name');
-        openSendMessage(userId, userName);
-        return;
-      }
-
-      // Normal kullanıcı seçimi
-      const userId = item.getAttribute('data-user-id');
-      const userName = item.getAttribute('data-user-name');
-
-      if (activeUserId === userId) return;
-
+  // Kullanıcı seçimi
+  userListUl.querySelectorAll('.user-list-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const userId = item.dataset.userId;
+      const userName = item.dataset.userName;
+      if(activeUserId === userId) return;
       setActiveUser(userId, userName);
     });
   });
 
-  // Aktif Kullanıcıyı Set Et ve Mesajları Getir
-  function setActiveUser(userId, userName) {
+  function setActiveUser(userId, userName){
     activeUserId = userId;
     activeUserName = userName;
-
-    userItems.forEach(i => i.classList.remove('active'));
-    [...userItems].find(i => i.getAttribute('data-user-id') === userId)?.classList.add('active');
-
-    chatWithTitle.textContent = `${userName} ile Mesajlaşma`;
+    userListUl.querySelectorAll('.user-list-item').forEach(i => i.classList.remove('active'));
+    [...userListUl.querySelectorAll('.user-list-item')].find(i => i.dataset.userId===userId)?.classList.add('active');
+    chatWithTitle.textContent = userName;
     chatInputForm.style.display = 'flex';
     chatInput.value = '';
     chatSendBtn.disabled = true;
-
     loadMessages(userId);
   }
 
-  // Sohbet Kapat
+  // Sohbeti kapatma
   closeChatBtn.addEventListener('click', () => {
+    if(activeUserId) socket.emit('leave_room', {user_id:activeUserId, technician_id:'{{ TECHNICIAN_ID }}'});
     activeUserId = null;
-    activeUserName = null;
-
-    userItems.forEach(i => i.classList.remove('active'));
     chatWithTitle.textContent = 'Bir kullanıcı seçin';
-    messageListDiv.innerHTML = '<div class="empty-placeholder">Kullanıcı seçildiğinde mesajlar burada görünecek.</div>';
     chatInputForm.style.display = 'none';
+    messageListDiv.innerHTML = `
+      <div class="empty-placeholder">
+        <div class="placeholder-icon">💬</div>
+        <div class="placeholder-text">Kullanıcı seçildiğinde mesajlar burada görünecek.</div>
+      </div>`;
+    userListUl.querySelectorAll('.user-list-item').forEach(i => i.classList.remove('active'));
   });
 
-  // Mesajları Yükle
-  function loadMessages(userId) {
+  // Mesajları yükleme
+  function loadMessages(userId){
     messageListDiv.innerHTML = '<div class="empty-placeholder">Mesajlar yükleniyor...</div>';
-
-    fetch(`/technician/messages/${userId}/get_messages`, {
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(res => {
-      if (!res.ok) throw new Error("Mesajlar alınamadı");
-      return res.json();
-    })
-    .then(data => {
-      if (!data.success) throw new Error(data.message || "Mesajlar alınamadı");
-
-      if (data.messages.length === 0) {
-        messageListDiv.innerHTML = `<div class="empty-placeholder">Henüz mesaj yok.</div>`;
-        return;
-      }
-
-      let html = '';
-      data.messages.forEach(msg => {
-        html += `
-          <div class="message-item ${msg.from_technician ? 'message-sender-tech' : 'message-sender-user'}">
-            ${escapeHtml(msg.body)}
-            <div class="message-meta">${msg.timestamp}</div>
-          </div>`;
+    fetch(`/technician/messages/${userId}/get_messages`, { headers:{'X-Requested-With':'XMLHttpRequest'} })
+      .then(res => res.json())
+      .then(data => {
+        if(!data.success) throw new Error('Mesajlar alınamadı');
+        if(data.messages.length===0){
+          messageListDiv.innerHTML = '<div class="empty-placeholder">Henüz mesaj yok.</div>'; 
+          return;
+        }
+        let lastDate = '';
+        let html = '';
+        data.messages.forEach(msg => {
+          const msgDate = msg.timestamp.split(' ')[0];
+          if(msgDate !== lastDate){ html += `<div class="message-date-divider">${msgDate}</div>`; lastDate = msgDate; }
+          html += `<div class="message-item ${msg.from_technician?'message-sender-tech':'message-sender-user'}">
+                     ${escapeHtml(msg.body)}
+                     <div class="message-meta">${msg.timestamp}</div>
+                   </div>`;
+        });
+        messageListDiv.innerHTML = html;
+        scrollToBottom();
+      })
+      .catch(err => {
+        messageListDiv.innerHTML = '<div class="empty-placeholder text-danger">Mesajlar yüklenirken hata oluştu.</div>';
+        console.error(err);
       });
-
-      messageListDiv.innerHTML = html;
-
-      // Scroll alta kaydır
-      messageListDiv.scrollTop = messageListDiv.scrollHeight;
-    })
-    .catch(err => {
-      messageListDiv.innerHTML = `<div class="empty-placeholder" style="color:#dc3545;">Mesajlar yüklenirken hata oluştu.</div>`;
-      console.error(err);
-    });
   }
 
-  // Mesaj Yazma Alanı - Aktif/Deaktif Buton
-  chatInput.addEventListener('input', () => {
-    chatSendBtn.disabled = chatInput.value.trim().length === 0;
+  // Mesaj input ve Enter kontrol
+  chatInput.addEventListener('input', ()=>chatSendBtn.disabled = chatInput.value.trim() === '');
+  chatInput.addEventListener('keydown', e => {
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); if(!chatSendBtn.disabled) chatSendBtn.click(); }
   });
 
-  // Mesaj Gönderimi
-  chatInputForm.addEventListener('submit', (e) => {
+  // Mesaj gönderimi
+  chatInputForm.addEventListener('submit', e => {
     e.preventDefault();
-    if (!activeUserId) return;
-
+    if(!activeUserId) return;
     const body = chatInput.value.trim();
-    if (body.length === 0) return;
-
+    if(!body) return;
     chatSendBtn.disabled = true;
 
     const formData = new FormData();
@@ -208,84 +219,69 @@
     formData.append('message_body', body);
 
     fetch("{{ url_for('technician_send_message') }}", {
-      method: 'POST',
+      method:'POST',
       body: formData,
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(res => {
-      if (!res.ok) throw new Error("Mesaj gönderilemedi");
-      return res.json();
-    })
-    .then(data => {
-      if (data.success) {
-        chatInput.value = '';
-        chatSendBtn.disabled = true;
-
-        // Mesajı Listeye Ekleyip Alta Kaydır
-        const newMessage = document.createElement('div');
-        newMessage.className = 'message-item message-sender-tech';
-        newMessage.innerHTML = `
-          ${escapeHtml(body)}
-          <div class="message-meta">şimdi</div>
-        `;
-        messageListDiv.appendChild(newMessage);
-        messageListDiv.scrollTop = messageListDiv.scrollHeight;
-
-        showToast(data.message, 'success');
-      } else {
-        showToast(data.message || "Mesaj gönderilemedi", 'danger');
-        chatSendBtn.disabled = false;
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      showToast("Mesaj gönderilemedi", 'danger');
-      chatSendBtn.disabled = false;
-    });
+      headers:{'X-Requested-With':'XMLHttpRequest'}
+    }).then(res=>res.json())
+      .then(data=>{
+        if(data.success){
+          chatInput.value=''; chatSendBtn.disabled=true;
+          appendMessage(body,true,'şimdi'); showToast(data.message,'success');
+          updateUserListLastMessage(activeUserId,body,'şimdi',true);
+        } else { chatSendBtn.disabled=false; showToast(data.message||'Mesaj gönderilemedi','danger'); }
+      }).catch(err=>{ chatSendBtn.disabled=false; showToast('Mesaj gönderilemedi','danger'); console.error(err); });
   });
 
-  // Modal değil, direk sayfa içi sohbet aç
-  function openSendMessage(userId, userName) {
-    setActiveUser(userId, userName);
-    chatInput.focus();
+  // Socket.IO gelen mesaj
+  socket.on('receive_message', data => {
+    if(activeUserId === String(data.user_id)){
+      appendMessage(data.body, data.from_technician, data.timestamp);
+      updateUserListLastMessage(activeUserId, data.body, data.timestamp, false);
+    } else {
+      updateUserListLastMessage(data.user_id, data.body, data.timestamp, true);
+    }
+  });
+
+  // Mesaj ekleme helper
+  function appendMessage(body, fromTech, timestamp){
+    const div = document.createElement('div');
+    div.className = `message-item ${fromTech?'message-sender-tech':'message-sender-user'}`;
+    div.innerHTML = `${escapeHtml(body)}<div class="message-meta">${timestamp}</div>`;
+    messageListDiv.appendChild(div);
+    scrollToBottom();
   }
 
-  // XSS için HTML Escape
-  function escapeHtml(text) {
-    const map = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
+  // Kullanıcı listesi güncelleme
+  function updateUserListLastMessage(userId,lastMsg,timestamp,incBadge){
+    const item = [...userListUl.querySelectorAll('.user-list-item')].find(i=>i.dataset.userId===String(userId));
+    if(item){
+      item.querySelector('.user-last-message').textContent = lastMsg.length>30?lastMsg.substr(0,30)+'...':lastMsg;
+      item.querySelector('.user-time').textContent = timestamp.split(' ')[1]||timestamp;
+      const badge = item.querySelector('.user-unread-badge');
+      if(incBadge) badge.classList.remove('d-none'), badge.textContent=(parseInt(badge.textContent||'0')+1);
+      else badge.classList.add('d-none'), badge.textContent='0';
+    }
   }
 
-  // Toast Göster
-  function showToast(message, type = 'success') {
-    const toastHTML = `
-      <div class="toast align-items-center text-bg-${type} border-0 show mb-2 shadow" 
-           style="z-index: 1055; position: fixed; top: 1rem; right: 1rem;">
-        <div class="d-flex">
-          <div class="toast-body">${message}</div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-      </div>`;
-    const toastElem = document.createElement('div');
-    toastElem.innerHTML = toastHTML;
-    document.body.appendChild(toastElem.firstElementChild);
+  // Scroll helper
+  function scrollToBottom(){ messageListDiv.scrollTop = messageListDiv.scrollHeight; }
 
-    // Otomatik kaybolma
-    setTimeout(() => {
-      const toast = document.querySelector('.toast.show');
-      if (toast) {
-        bootstrap.Toast.getOrCreateInstance(toast).hide();
-        setTimeout(() => toast.remove(), 300);
-      }
-    }, 4000);
+  // XSS escape
+  function escapeHtml(text){ return text.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+  // Toast helper
+  function showToast(msg,type='success'){
+    const t=document.createElement('div');
+    t.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show mb-2 shadow" style="position:fixed;top:1rem;right:1rem;z-index:1055;">
+                     <div class="d-flex"><div class="toast-body">${msg}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+                   </div>`;
+    document.body.appendChild(t.firstElementChild);
+    setTimeout(()=>{ const x=document.querySelector('.toast.show'); if(x) bootstrap.Toast.getOrCreateInstance(x).hide(); setTimeout(()=>x.remove(),300); },4000);
   }
 
 })();
 </script>
 {% endblock %}
+
+  
+

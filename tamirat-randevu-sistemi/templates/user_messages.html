@@ -8,6 +8,7 @@
 {% endblock %}
 
 {% block content %}
+
 <div class="chat-container">
     <!-- Sol panel: Tekniker listesi -->
     <div class="tech-list">
@@ -18,9 +19,15 @@
         <ul id="techListUl">
             {% for tech in technicians %}
             <li class="tech-item" data-tech-id="{{ tech.id }}">
-                <div class="tech-avatar">{{ tech.ad[0]|upper }}{{ tech.soyad[0]|upper }}</div>
-                <span class="tech-name">{{ tech.ad }} {{ tech.soyad }}</span>
-            </li>
+    <div class="tech-avatar">{{ tech.ad[0]|upper }}{{ tech.soyad[0]|upper }}</div>
+    <div class="tech-info">
+        <span class="tech-name">
+            {{ tech.ad }} {{ tech.soyad[:2]|upper }}{% for i in range(tech.soyad|length - 2) %}*{% endfor %}
+        </span>
+        <span class="tech-status">Çevrimiçi</span>
+    </div>
+</li>
+
             {% endfor %}
         </ul>
     </div>
@@ -28,24 +35,34 @@
     <!-- Sağ panel: Mesaj alanı -->
     <div class="chat-area">
         <div class="chat-header">
-            <span id="chatWithTitle">Bir tekniker seçin</span>
+            <div class="chat-header-left">
+                <div class="chat-avatar"></div>
+                <span id="chatWithTitle">Bir tekniker seçin</span>
+            </div>
             <span id="closeChat" title="Sohbeti kapat">✕</span>
         </div>
         <div class="message-list" id="messageList">
-            <div class="empty-placeholder">Tekniker seçildiğinde mesajlar burada görünecek.</div>
+            <div class="empty-placeholder">
+  <div class="placeholder-icon">💬</div>
+  <div class="placeholder-text">
+    Tekniker seçildiğinde mesajlar burada görünecek.
+  </div>
+</div>
         </div>
         <form id="chatInputForm" class="chat-input-area" style="display:none;" novalidate>
             <textarea id="chatInput" placeholder="Mesaj yazın..." rows="1" required></textarea>
-            <button type="submit" disabled>Gönder</button>
+            <button type="submit" disabled><i class="bi bi-send-fill"></i></button>
         </form>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-const socket = io(); // Socket.IO bağlantısı
+const socket = io();
 let activeTechId = null;
+const userId = parseInt("{{ current_user.get_id().split('-')[1] }}");
 
 const techListUl = document.getElementById('techListUl');
 const techItems = techListUl.querySelectorAll('.tech-item');
@@ -55,13 +72,11 @@ const chatInput = document.getElementById('chatInput');
 const chatSendBtn = chatInputForm.querySelector('button');
 const closeChatBtn = document.getElementById('closeChat');
 
-// XSS güvenliği için escape fonksiyonu
 function escapeHtml(text){
     const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
     return text.replace(/[&<>"']/g, m=>map[m]);
 }
 
-// Mesaj ekleme fonksiyonu
 function appendMessage(message, fromUser){
     const div = document.createElement('div');
     div.className = fromUser ? 'message-sender-user' : 'message-sender-tech';
@@ -70,8 +85,6 @@ function appendMessage(message, fromUser){
         <div class="timestamp">${message.timestamp}</div>
     `;
     messageListDiv.appendChild(div);
-
-    // Scroll her zaman en alta
     messageListDiv.scrollTop = messageListDiv.scrollHeight;
 }
 
@@ -90,17 +103,25 @@ techItems.forEach(item => {
         chatSendBtn.disabled = true;
 
         loadMessages(activeTechId);
-        socket.emit('join_room', { tech_id: activeTechId });
+        socket.emit('join_room', { user_id: userId, technician_id: activeTechId });
     });
 });
 
-// Sohbet kapatma
-closeChatBtn.addEventListener('click', ()=> {
+// Sohbeti kapatma
+closeChatBtn.addEventListener('click', () => {
     chatInputForm.style.display = 'none';
-    messageListDiv.innerHTML = '<div class="empty-placeholder">Tekniker seçildiğinde mesajlar burada görünecek.</div>';
+    messageListDiv.innerHTML = `
+        <div class="empty-placeholder">
+            <div class="placeholder-icon">💬</div>
+            <div class="placeholder-text">Tekniker seçildiğinde mesajlar burada görünecek.</div>
+        </div>
+    `;
+    if (activeTechId) {
+        socket.emit('leave_room', { user_id: userId, technician_id: activeTechId });
+    }
     activeTechId = null;
     document.getElementById('chatWithTitle').textContent = 'Bir tekniker seçin';
-    techItems.forEach(i => i.classList.remove('active'));
+    techItems.forEach(item => item.classList.remove('active'));
 });
 
 // Mesajları yükleme
@@ -109,13 +130,10 @@ function loadMessages(tech_id){
     .then(res => res.json())
     .then(data => {
         messageListDiv.innerHTML = '';
-
         if(data.messages.length === 0){
             messageListDiv.innerHTML = '<div class="empty-placeholder">Henüz mesaj yok.</div>';
             return;
         }
-
-        // Kronolojik sıraya göre ekle
         data.messages.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
         data.messages.forEach(m => appendMessage(m, m.from_user));
     });
@@ -123,6 +141,12 @@ function loadMessages(tech_id){
 
 // Mesaj yazma ve gönderme
 chatInput.addEventListener('input', ()=> chatSendBtn.disabled = chatInput.value.trim() === '');
+chatInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        if(!chatSendBtn.disabled) chatSendBtn.click();
+    }
+});
 
 chatInputForm.addEventListener('submit', e => {
     e.preventDefault();
@@ -131,30 +155,39 @@ chatInputForm.addEventListener('submit', e => {
     const messageText = chatInput.value.trim();
     if(!messageText) return;
 
-    const fd = new FormData();
-    fd.append('message_body', messageText);
-
-    fetch(`/user/messages/${activeTechId}/send`, {method:'POST', body:fd})
+    // Backend’e kaydetme
+    fetch(`/user/messages/${activeTechId}/send`, {
+        method: 'POST',
+        body: new URLSearchParams({ 
+            message_body: messageText,
+            user_id: activeTechId   // ⚠ user_id ekledik
+        }),
+        headers: {'X-Requested-With':'XMLHttpRequest'}
+    })
     .then(res => res.json())
     .then(data => {
         if(data.success){
-            chatInput.value='';
+            chatInput.value = '';
             chatSendBtn.disabled = true;
 
-            // Kullanıcı mesajını anında ekle
-            const timestamp = new Date().toLocaleString();
-            appendMessage({body: messageText, timestamp: timestamp}, true);
+            // Socket ile anlık gönder
+            socket.emit('send_message', {
+                user_id: userId,
+                technician_id: activeTechId,
+                body: messageText,
+                sender_type: 'user'
+            });
         } else {
             alert(data.message);
         }
     });
 });
 
-// Socket.IO: Gelen yeni mesajı ekleme
+// Socket.IO: Gelen mesajları ekle
 socket.on('receive_message', data => {
     if(!activeTechId) return;
-    if(parseInt(activeTechId) === data.tech_id || parseInt(activeTechId) === data.user_id){
-        appendMessage({body: data.body, timestamp: data.timestamp}, data.from_user);
+    if(data.technician_id === activeTechId && data.user_id === userId){
+        appendMessage({body: data.body, timestamp: data.timestamp}, data.sender_type === 'user');
     }
 });
 
@@ -167,7 +200,8 @@ document.getElementById('techSearch').addEventListener('input', ()=> {
     });
 });
 </script>
-
-
-
 {% endblock %}
+
+
+
+
