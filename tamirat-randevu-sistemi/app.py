@@ -14,6 +14,9 @@ from flask_socketio import SocketIO, emit, join_room,leave_room
 from calendar import month_name
 from sqlalchemy import extract
 import eventlet
+from sqlalchemy.engine import Engine
+from sqlalchemy import event
+import sqlite3
 
 
 app = Flask(__name__)
@@ -47,8 +50,13 @@ class User(UserMixin, db.Model):
     sifre = db.Column(db.String(255), nullable=False)
     kayit_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Cascade ile randevu ve mesajların otomatik silinmesi
+    appointments = db.relationship('Appointment', backref='user', lazy=True, cascade="all, delete-orphan")
+    received_messages = db.relationship('Message', backref='user', lazy=True, cascade="all, delete-orphan")
+
     def get_id(self):
         return f"user-{self.id}"
+
 
 class Technician(UserMixin, db.Model):
     __tablename__ = 'technicians'
@@ -67,8 +75,12 @@ class Technician(UserMixin, db.Model):
     ek_yetenekler = db.Column(db.Text)
     sifre = db.Column(db.String(255), nullable=False)
     kayit_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    onay = db.Column(db.Boolean, default=False)    # Tekniker onayı
-    iptal = db.Column(db.Boolean, default=False)   # Tekniker iptal durumu
+    onay = db.Column(db.Boolean, default=False)
+    iptal = db.Column(db.Boolean, default=False)
+
+    # Cascade ile ilişkili randevu ve mesajların silinmesi
+    appointments = db.relationship('Appointment', backref='technician', lazy=True, cascade="all, delete-orphan")
+    sent_messages = db.relationship('Message', backref='technician', lazy=True, cascade="all, delete-orphan")
 
     def get_id(self):
         return f"tech-{self.id}"
@@ -77,8 +89,8 @@ class Technician(UserMixin, db.Model):
 class Appointment(db.Model):
     __tablename__ = 'appointments'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    technician_id = db.Column(db.Integer, db.ForeignKey('technicians.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
+    technician_id = db.Column(db.Integer, db.ForeignKey('technicians.id', ondelete="SET NULL"), nullable=True)
     date = db.Column(db.Date, nullable=False)
     uzmanlik = db.Column(db.String(100), nullable=False)
     destek_modeli = db.Column(db.String(50), nullable=False)
@@ -86,25 +98,17 @@ class Appointment(db.Model):
     description = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='Beklemede')
 
-    # İlişkiler
-    user = db.relationship('User', backref='appointments')
-    technician = db.relationship('Technician', backref='appointments')  # Tekniker ilişkisi tanımlı
-
 
 class Message(db.Model):
     __tablename__ = 'messages'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    technician_id = db.Column(db.Integer, db.ForeignKey('technicians.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
+    technician_id = db.Column(db.Integer, db.ForeignKey('technicians.id', ondelete="CASCADE"), nullable=False)
     subject = db.Column(db.String(150), nullable=False)
     body = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    sender_type = db.Column(db.String(20), nullable=False)  # 'user' veya 'technician' ekledik
-    
-    user = db.relationship('User', backref=db.backref('received_messages', lazy=True))
-    technician = db.relationship('Technician', backref=db.backref('sent_messages', lazy=True))
+    sender_type = db.Column(db.String(20), nullable=False)
 
     def __repr__(self):
         return f'<Message {self.subject} from {self.sender_type} (tech:{self.technician_id}, user:{self.user_id})>'
@@ -143,6 +147,13 @@ def load_user(user_id):
         return db.session.get(Admin, int(user_id[6:]))
 
    
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 @app.route('/')
@@ -1458,10 +1469,18 @@ def delete_user(id):
         return redirect(url_for('admin_login'))
 
     user = User.query.get_or_404(id)
-    db.session.delete(user)
-    db.session.commit()
-    flash(f"{user.ad} {user.soyad} adlı kullanıcı silindi.", 'success')
+
+    try:
+        # Kullanıcıyı sil (appointments ve messages cascade ile otomatik silinecek)
+        db.session.delete(user)
+        db.session.commit()
+        flash(f"{user.ad} {user.soyad} adlı kullanıcı ve ilişkili tüm randevu & mesajları silindi.", 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Kullanıcı silinirken hata oluştu: {str(e)}", 'danger')
+
     return redirect(url_for('manage_users'))
+
 
 
 
@@ -1650,22 +1669,29 @@ def delete_technician(id):
         flash('Admin girişi yapmalısınız!', 'danger')
         return redirect(url_for('admin_login'))
 
+    # Teknikeri getir, yoksa 404 döndür
     technician = Technician.query.get_or_404(id)
-    db.session.delete(technician)
-    db.session.commit()
 
-    flash(f'{technician.ad} {technician.soyad} isimli tekniker silindi.', 'success')
+    try:
+        db.session.delete(technician)
+        db.session.commit()
+        flash(f'{technician.ad} {technician.soyad} isimli tekniker silindi.', 'success')
+    except Exception as e:
+        db.session.rollback()  # Hata durumunda işlemi geri al
+        flash(f'Tekniker silinirken hata oluştu: {str(e)}', 'danger')
+
     return redirect(url_for('manage_technicians'))
 
 
 
-#if __name__ == '__main__':
- #   with app.app_context():
-#      db.create_all()
- #   socketio.run(app, debug=True)
 
-import os
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=True)
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    socketio.run(app, debug=True)
+
+#import os
+#if __name__ == "__main__":
+#   port = int(os.environ.get("PORT", 5000))
+#    socketio.run(app, host="0.0.0.0", port=port, debug=True)
 
