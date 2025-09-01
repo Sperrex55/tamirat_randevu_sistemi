@@ -6,4 +6,3 @@ Flask-SocketIO
 eventlet
 python-dotenv
 SQLAlchemy
-

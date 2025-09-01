@@ -145,8 +145,13 @@
   });
 
   function setActiveUser(userId, userName){
+    // Aktif kullanıcıyı ayarla
     activeUserId = userId;
     activeUserName = userName;
+
+    // Room'a katıl
+    socket.emit('join_room', { user_id: userId, technician_id: '{{ TECHNICIAN_ID }}' });
+
     userListUl.querySelectorAll('.user-list-item').forEach(i => i.classList.remove('active'));
     [...userListUl.querySelectorAll('.user-list-item')].find(i => i.dataset.userId===userId)?.classList.add('active');
     chatWithTitle.textContent = userName;
@@ -226,7 +231,7 @@
       .then(data=>{
         if(data.success){
           chatInput.value=''; chatSendBtn.disabled=true;
-          appendMessage(body,true,'şimdi'); showToast(data.message,'success');
+          showToast(data.message,'success');
           updateUserListLastMessage(activeUserId,body,'şimdi',true);
         } else { chatSendBtn.disabled=false; showToast(data.message||'Mesaj gönderilemedi','danger'); }
       }).catch(err=>{ chatSendBtn.disabled=false; showToast('Mesaj gönderilemedi','danger'); console.error(err); });
@@ -282,6 +287,7 @@
 })();
 </script>
 {% endblock %}
+
 
   
 
