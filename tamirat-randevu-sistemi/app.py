@@ -1664,6 +1664,8 @@ def delete_technician(id):
 #      db.create_all()
  #   socketio.run(app, debug=True)
 
+import os
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, debug=True)
+
