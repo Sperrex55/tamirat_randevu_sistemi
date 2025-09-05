@@ -4,6 +4,13 @@
 
 Dijitalleşen çağda randevu süreçlerini hızlandırarak zamandan ve iş gücünden tasarruf sağlar, müşteri memnuniyetini artırır.
 
+
+
+
+<p align="center">
+  <img src="https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif" width="600" alt="Demo" />
+</p>
+
 ---
 
 ## 🚀 Özellikler
